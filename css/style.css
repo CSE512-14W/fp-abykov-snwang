@@ -1,0 +1,21 @@
+svg {
+  font: 12px sans-serif;
+}
+
+text {
+  fill: #262626;
+}
+
+.axis text {
+  font: 10px sans-serif;
+}
+
+.axis {
+  fill: #262626;
+}
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #262626;
+  shape-rendering: crispEdges;
+}

@@ -27,7 +27,7 @@ queue()
 function drawElements(err, unparsedData) {
   var parsedData = d3.csv.parseRows(unparsedData);
    
-  plotData(0, 2);
+  plotData(16, 17);
    
   function plotData(xdim, ydim) {
     var plotArea = plot.append("rect")
@@ -74,12 +74,12 @@ function drawElements(err, unparsedData) {
     }
     
     // Add padding to each of min/max X and min/maxY
-    /*var widthPadding = (maxX - minX) * dataPaddingPercentage;
+    var widthPadding = (maxX - minX) * dataPaddingPercentage;
     minX -= widthPadding;
     maxX += widthPadding;
     var heightPadding = (maxY - minY) * dataPaddingPercentage;
     minY -= heightPadding;
-    maxY += heightPadding;*/
+    maxY += heightPadding;
     
     // Set up the axes
     var xScale = d3.scale.linear()
@@ -87,16 +87,22 @@ function drawElements(err, unparsedData) {
                    .nice()
                    .range([plotPadding, width]);
     var xAxis = d3.svg.axis()
-                      .scale(xScale)
-                      .ticks(10);
+                      .scale(xScale);
+    var xTicks = xScale.ticks(10);
     var yScale = d3.scale.linear()
                    .domain([minY, maxY])
                    .nice()
                    .range([topHeight - plotPadding, 0]);
     var yAxis = d3.svg.axis()
                       .scale(yScale)
-                      .orient("left")
-                      .ticks(10);
+                      .orient("left");
+    var yTicks = yScale.ticks(10);
+    
+    // Readjust the min and max values based on the "nice" function
+    minX = xScale.domain()[0];
+    maxX = xScale.domain()[1];
+    minY = yScale.domain()[0];
+    maxY = yScale.domain()[1];
     
     // Plot the axes
     plot.append("g")
@@ -108,6 +114,27 @@ function drawElements(err, unparsedData) {
         .attr("transform", "translate(" + plotPadding + ", 0)")
         .call(yAxis);
         
+    // Plot the gridlines
+    var xGridlines = plot.selectAll("vline")
+                         .data(xTicks)
+                         .enter()
+                         .append("line");
+    xGridlines.attr("x1", function (d) { return xScale(d); })
+              .attr("y1", yScale(minY))
+              .attr("x2", function (d) { return xScale(d); })
+              .attr("y2", yScale(maxY))
+              .attr("class", "gridline");
+    
+    var yGridlines = plot.selectAll("hline")
+                         .data(yTicks)
+                         .enter()
+                         .append("line");
+    yGridlines.attr("x1", xScale(minX))
+              .attr("y1", function (d) { return yScale(d); })
+              .attr("x2", xScale(maxX))
+              .attr("y2", function (d) { return yScale(d); })
+              .attr("class", "gridline");
+    
     // Add a color scale for the classes
     var colorScale = d3.scale.category10();
         

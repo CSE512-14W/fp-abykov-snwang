@@ -19,3 +19,9 @@ text {
   stroke: #262626;
   shape-rendering: crispEdges;
 }
+
+.gridline {
+  stroke: #ccc;
+  opacity: 0.5;
+  shape-rendering: crispEdges;
+}

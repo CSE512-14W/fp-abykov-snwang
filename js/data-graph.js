@@ -27,7 +27,7 @@ queue()
 function drawElements(err, unparsedData) {
   var parsedData = d3.csv.parseRows(unparsedData);
    
-  plotData(16, 17);
+  plotData(0, 2);
    
   function plotData(xdim, ydim) {
     var plotArea = plot.append("rect")
@@ -66,7 +66,7 @@ function drawElements(err, unparsedData) {
       }
       var lineClass = parsedData[i][numDim];
       
-      plotData.push({"x":x, "y":y, "class":lineClass});
+      plotData.push({"x":x, "y":y, "dclass":lineClass});
       
       if (classes.indexOf(lineClass) < 0) {
         classes.push(lineClass);
@@ -74,22 +74,24 @@ function drawElements(err, unparsedData) {
     }
     
     // Add padding to each of min/max X and min/maxY
-    var widthPadding = (maxX - minX) * dataPaddingPercentage;
+    /*var widthPadding = (maxX - minX) * dataPaddingPercentage;
     minX -= widthPadding;
     maxX += widthPadding;
     var heightPadding = (maxY - minY) * dataPaddingPercentage;
     minY -= heightPadding;
-    maxY += heightPadding;
+    maxY += heightPadding;*/
     
     // Set up the axes
     var xScale = d3.scale.linear()
                    .domain([minX, maxX])
+                   .nice()
                    .range([plotPadding, width]);
     var xAxis = d3.svg.axis()
                       .scale(xScale)
                       .ticks(10);
     var yScale = d3.scale.linear()
                    .domain([minY, maxY])
+                   .nice()
                    .range([topHeight - plotPadding, 0]);
     var yAxis = d3.svg.axis()
                       .scale(yScale)
@@ -106,6 +108,9 @@ function drawElements(err, unparsedData) {
         .attr("transform", "translate(" + plotPadding + ", 0)")
         .call(yAxis);
         
+    // Add a color scale for the classes
+    var colorScale = d3.scale.category10();
+        
     // Plot all of the points
     var points = plot.selectAll("circle")
                      .data(plotData)
@@ -115,6 +120,7 @@ function drawElements(err, unparsedData) {
     // Assign all of the point attributes
     points.attr("cx", function (d) { return xScale(d.x); })
           .attr("cy", function (d) { return yScale(d.y); })
-          .attr("r", 2);
+          .attr("r", 2)
+          .attr("fill", function (d) { return colorScale(classes.indexOf(d.dclass)); });
   }
 }

@@ -2,7 +2,7 @@
 var margin = {top: 40, right: 30, bottom: 20, left: 30},
     width = 1280 - margin.left - margin.right,
     height = 800 - margin.top - margin.bottom,
-    topHeight = Math.round(height * 0.8),
+    topHeight = Math.round(height * 0.7),
     botHeight = height - botHeight;
 
 var fullChart = d3.select("body")
@@ -26,15 +26,18 @@ var dataPaddingPercentage = 0.02;
 queue()
   .defer(d3.text, "data/biodeg.csv")
   .defer(d3.text, "data/biodeg-features.txt")
+  .defer(d3.text, "data/biodeg-w.csv")
   .await(drawElements);
   
-function drawElements(err, unparsedData, unparsedFeatureNames) {
+function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVectors) {
   var parsedData = d3.csv.parseRows(unparsedData);
   var featureNames = d3.csv.parseRows(unparsedFeatureNames);
+  var weightVectors = d3.csv.parseRows(unparsedWeightVectors);
    
-  plotData(16, 17);
+  // Plot the weight vector
+  plotData(8, 10, weightVectors[10000]);
    
-  function plotData(xdim, ydim) {
+  function plotData(xdim, ydim, w) {
     // Plot the rectangle behind the actual plot
     var plotWidth = width - axesPadding - labelPadding;
     var plotHeight = topHeight - axesPadding - labelPadding;
@@ -179,5 +182,27 @@ function drawElements(err, unparsedData, unparsedFeatureNames) {
           .attr("cy", function (d) { return yScale(d.y); })
           .attr("r", 2)
           .attr("fill", function (d) { return colorScale(classes.indexOf(d.dclass)); });
+          
+    // Plot the decision boundary (just linear for now)
+    var numPointsInLine = 1000;
+    var pointDelta = (maxX - minX) / numPointsInLine;
+    var decisionBoundaryData = new Array();
+    var w0 = parseFloat(w[0]);
+    var w1 = parseFloat(w[xdim + 1]);
+    var w2 = parseFloat(w[ydim + 1]);
+    for (var x = minX; x <= maxX; x += pointDelta) {
+      decisionBoundaryData.push({"dx":x, "dy":(w0 + w1 * x) / w2});
+    }
+    
+    var decisionBoundary = plot.append("g")
+                               .selectAll("circle")
+                               .data(decisionBoundaryData)
+                               .enter()
+                               .append("circle");
+                     
+    decisionBoundary.attr("cx", function (d) { return xScale(d.dx); })
+                    .attr("cy", function (d) { return yScale(d.dy); })
+                    .attr("r", 1)
+                    .attr("fill", "black");
   }
 }

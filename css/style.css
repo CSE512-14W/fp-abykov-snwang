@@ -25,3 +25,7 @@ text {
   opacity: 0.5;
   shape-rendering: crispEdges;
 }
+
+.label {
+  font: 10px sans-serif;
+}

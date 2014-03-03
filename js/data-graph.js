@@ -2,7 +2,7 @@
 var margin = {top: 40, right: 30, bottom: 20, left: 30},
     width = 1280 - margin.left - margin.right,
     height = 800 - margin.top - margin.bottom,
-    topHeight = Math.round(height * 0.7),
+    topHeight = Math.round(height * 0.8),
     botHeight = height - botHeight;
 
 var fullChart = d3.select("body")
@@ -14,7 +14,10 @@ var plot = fullChart.append("g")
                     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
                     
 // The padding for the axes
-var plotPadding = 30;
+var axesPadding = 40;
+
+// The padding for the axes labels
+var labelPadding = 0;
 
 // The padding between data points and axes
 var dataPaddingPercentage = 0.02;
@@ -22,18 +25,23 @@ var dataPaddingPercentage = 0.02;
 // Load in all of the data
 queue()
   .defer(d3.text, "data/biodeg.csv")
+  .defer(d3.text, "data/biodeg-features.txt")
   .await(drawElements);
   
-function drawElements(err, unparsedData) {
+function drawElements(err, unparsedData, unparsedFeatureNames) {
   var parsedData = d3.csv.parseRows(unparsedData);
+  var featureNames = d3.csv.parseRows(unparsedFeatureNames);
    
   plotData(16, 17);
    
   function plotData(xdim, ydim) {
+    // Plot the rectangle behind the actual plot
+    var plotWidth = width - axesPadding - labelPadding;
+    var plotHeight = topHeight - axesPadding - labelPadding;
     var plotArea = plot.append("rect")
-                       .attr("x", plotPadding)
-                       .attr("width", width - plotPadding)
-                       .attr("height", topHeight - plotPadding)
+                       .attr("x", axesPadding + labelPadding)
+                       .attr("width", plotWidth)
+                       .attr("height", plotHeight)
                        .attr("fill", "#eee")
                        .attr("opacity", 0.5);
   
@@ -85,14 +93,14 @@ function drawElements(err, unparsedData) {
     var xScale = d3.scale.linear()
                    .domain([minX, maxX])
                    .nice()
-                   .range([plotPadding, width]);
+                   .range([axesPadding + labelPadding, width]);
     var xAxis = d3.svg.axis()
                       .scale(xScale);
     var xTicks = xScale.ticks(10);
     var yScale = d3.scale.linear()
                    .domain([minY, maxY])
                    .nice()
-                   .range([topHeight - plotPadding, 0]);
+                   .range([plotHeight, 0]);
     var yAxis = d3.svg.axis()
                       .scale(yScale)
                       .orient("left");
@@ -107,11 +115,11 @@ function drawElements(err, unparsedData) {
     // Plot the axes
     plot.append("g")
         .attr("class", "axis")
-        .attr("transform", "translate(0, " + (topHeight - plotPadding) + ")")
+        .attr("transform", "translate(0, " + plotHeight + ")")
         .call(xAxis);
     plot.append("g")
         .attr("class", "axis")
-        .attr("transform", "translate(" + plotPadding + ", 0)")
+        .attr("transform", "translate(" + (axesPadding + labelPadding) + ", 0)")
         .call(yAxis);
         
     // Plot the gridlines
@@ -134,6 +142,28 @@ function drawElements(err, unparsedData) {
               .attr("x2", xScale(maxX))
               .attr("y2", function (d) { return yScale(d); })
               .attr("class", "gridline");
+    
+    // Add labels to the axes
+    var xlabel = plot.append("g");
+    xlabel.append("text")
+          .text(featureNames[xdim][0])
+          .attr("class", "label")
+          .style("visibility", "hidden");
+    var xLabelWidth = xlabel.select("text").node().getComputedTextLength();
+    xlabel.select("text")
+          .attr("x", labelPadding + axesPadding + (plotWidth - xLabelWidth) / 2)
+          .attr("y", plotHeight + axesPadding)
+          .style("visibility", "visible");
+          
+    var ylabel = plot.append("g");
+    ylabel.append("text")
+          .text(featureNames[ydim][0])
+          .attr("class", "label")
+          .style("visibility", "hidden");
+    var yLabelWidth = ylabel.select("text").node().getComputedTextLength();
+    ylabel.select("text")
+          .attr("transform", "translate(" + 0 + "," + ((plotHeight + yLabelWidth) / 2) + ")rotate(-90)")
+          .style("visibility", "visible");
     
     // Add a color scale for the classes
     var colorScale = d3.scale.category10();

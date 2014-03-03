@@ -35,7 +35,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
   var weightVectors = d3.csv.parseRows(unparsedWeightVectors);
    
   // Plot the weight vector
-  plotData(8, 10, weightVectors[10000]);
+  plotData(4, 14, weightVectors[10000]);
    
   function plotData(xdim, ydim, w) {
     // Plot the rectangle behind the actual plot
@@ -191,7 +191,10 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
     var w1 = parseFloat(w[xdim + 1]);
     var w2 = parseFloat(w[ydim + 1]);
     for (var x = minX; x <= maxX; x += pointDelta) {
-      decisionBoundaryData.push({"dx":x, "dy":(w0 + w1 * x) / w2});
+      var y = -(w0 + w1 * x) / w2;
+      if (y >= minY && y <= maxY) {
+        decisionBoundaryData.push({"dx":x, "dy":y});
+      }
     }
     
     var decisionBoundary = plot.append("g")

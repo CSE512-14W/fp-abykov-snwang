@@ -35,7 +35,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
   var weightVectors = d3.csv.parseRows(unparsedWeightVectors);
    
   // Plot the weight vector
-  plotData(4, 14, weightVectors[10000]);
+  plotData(0, 1, weightVectors[14409]);
    
   function plotData(xdim, ydim, w) {
     // Plot the rectangle behind the actual plot
@@ -60,9 +60,17 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
     var classes = new Array();
     var numDim = parsedData[0].length - 1;
     
+    // We need to normalize the data in order to classify
+    var meanX = 0;
+    var meanY = 0;
+    var stdX = 0;
+    var stdY = 0;
+    
     for (var i = 0; i < parsedData.length; i++) {
       var x = parseFloat(parsedData[i][xdim]);
       var y = parseFloat(parsedData[i][ydim]);
+      meanX += x;
+      meanY += y;
       if (x < minX) {
         minX = x;
       }
@@ -83,6 +91,19 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
         classes.push(lineClass);
       }
     }
+    
+    meanX /= plotData.length;
+    meanY /= plotData.length;
+    
+    // Calculate the standard deviations
+    for (var i = 0; i < plotData.length; i++) {
+      stdX += (plotData[i].x - meanX) * (plotData[i].x - meanX);
+      stdY += (plotData[i].y - meanY) * (plotData[i].y - meanY);
+    }
+    stdX /= (plotData.length - 1);
+    stdY /= (plotData.length - 1);
+    stdX = Math.sqrt(stdX);
+    stdY = Math.sqrt(stdY);
     
     // Add padding to each of min/max X and min/maxY
     var widthPadding = (maxX - minX) * dataPaddingPercentage;
@@ -191,7 +212,9 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
     var w1 = parseFloat(w[xdim + 1]);
     var w2 = parseFloat(w[ydim + 1]);
     for (var x = minX; x <= maxX; x += pointDelta) {
-      var y = -(w0 + w1 * x) / w2;
+    
+      var y = -(w0 + w1 * (x - meanX) / stdX) * stdY / w2 + meanY;
+      
       if (y >= minY && y <= maxY) {
         decisionBoundaryData.push({"dx":x, "dy":y});
       }

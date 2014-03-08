@@ -27,12 +27,61 @@ queue()
   .defer(d3.text, "data/biodeg.csv")
   .defer(d3.text, "data/biodeg-features.txt")
   .defer(d3.text, "data/biodeg-w.csv")
+  .defer(d3.text, "data/biodeg-classes.txt")
   .await(drawElements);
   
-function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVectors) {
+function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVectors, unparsedClassNames) {
   var parsedData = d3.csv.parseRows(unparsedData);
   var featureNames = d3.csv.parseRows(unparsedFeatureNames);
   var weightVectors = d3.csv.parseRows(unparsedWeightVectors);
+  var classes = d3.csv.parseRows(unparsedClassNames);
+   
+  // To make life easier for us later we can compute the min, max, mean and std of each dimension here
+  var numDim = parsedData[0].length - 1;
+  var featureMins = new Array(numDim);
+  var featureMaxs = new Array(numDim);
+  var featureMeans = new Array(numDim);
+  var featureStds = new Array(numDim);
+   
+  // Initialize everything
+  for (var i = 0; i < numDim; i++) {
+    featureMins[i] = parsedData[0][i];
+    featureMaxs[i] = parsedData[0][i];
+    featureMeans[i] = 0;
+    featureStds[i] = 0;
+  }
+   
+  for (var i = 0; i < parsedData.length; i++) {
+    for (var j = 0; j < numDim; j++) {
+      var val = parseFloat(parsedData[i][j]);
+      parsedData[i][j] = val;
+      featureMeans[j] += val;
+      if (val < featureMins[j]) {
+        featureMins[j] = val;
+      }
+      if (val > featureMaxs[j]) {
+        featureMaxs[j] = val;
+      }
+    }
+  }
+  
+  // Compute the means
+  for (var i = 0; i < numDim; i++) {
+    featureMeans[i] /= parsedData.length;
+  }
+  
+  // We need one more pass through the data to calculate the std
+  for (var i = 0; i < parsedData.length; i++) {
+    for (var j = 0; j < numDim; j++) {
+      var diff = parsedData[i][j] - featureMeans[j];
+      featureStds[j] += diff * diff;
+    }
+  }
+  
+  for (var i = 0; i < numDim; i++) {
+    featureStds[i] /= (parsedData.length - 1);
+    featureStds[i] = Math.sqrt(featureStds[i]);
+  }
    
   // Plot the weight vector
   plotData(0, 1, weightVectors[14409]);
@@ -49,61 +98,44 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
                        .attr("opacity", 0.5);
   
     // First we want to get the data for each dimension
-    // Additionally we want to keep track of the minX, maxX, minY and maxY values for the axes
+    // Additionally we want to keep track of various measures for each axis
     var plotData = new Array();
-    var minX = parsedData[0][xdim];
-    var maxX = parsedData[0][xdim];
-    var minY = parsedData[0][ydim];
-    var maxY = parsedData[0][ydim];
-    
-    // Also keep track of each class we encounter. This will be the last token of each line
-    var classes = new Array();
+    var minX = featureMins[xdim];
+    var maxX = featureMaxs[xdim];
+    var minY = featureMins[ydim];
+    var maxY = featureMaxs[ydim];
+    var meanX = featureMeans[xdim];
+    var meanY = featureMeans[ydim];
+    var stdX = featureStds[xdim];
+    var stdY = featureStds[ydim];
     var numDim = parsedData[0].length - 1;
     
-    // We need to normalize the data in order to classify
-    var meanX = 0;
-    var meanY = 0;
-    var stdX = 0;
-    var stdY = 0;
+    // Convert the w vector into floats
+    for (var i = 0; i < numDim + 1; i++) {
+      w[i] = parseFloat(w[i]);
+    }
     
     for (var i = 0; i < parsedData.length; i++) {
-      var x = parseFloat(parsedData[i][xdim]);
-      var y = parseFloat(parsedData[i][ydim]);
-      meanX += x;
-      meanY += y;
-      if (x < minX) {
-        minX = x;
-      }
-      if (x > maxX) {
-        maxX = x;
-      }
-      if (y < minY) {
-        minY = y;
-      }
-      if (y > maxY) {
-        maxY = y;
-      }
+      var x = parsedData[i][xdim];
+      var y = parsedData[i][ydim];
+      
+      // Also keep track of each class we encounter. This will be the last token of each line
       var lineClass = parsedData[i][numDim];
       
-      plotData.push({"x":x, "y":y, "dclass":lineClass});
+      // Calculate the predicted class given the w vector
+      var predSum = w[0];
+      for (var j = 0; j < numDim; j++) {
+        var dataPoint = (parsedData[i][j] - featureMeans[j]) / featureStds[j];
+        predSum += w[j + 1] * dataPoint;
+      }
+      var predClass = predSum > 0 ? classes[0] : classes[1];
+      
+      plotData.push({"x":x, "y":y, "dclass":lineClass, "pclass":predClass});
       
       if (classes.indexOf(lineClass) < 0) {
         classes.push(lineClass);
       }
     }
-    
-    meanX /= plotData.length;
-    meanY /= plotData.length;
-    
-    // Calculate the standard deviations
-    for (var i = 0; i < plotData.length; i++) {
-      stdX += (plotData[i].x - meanX) * (plotData[i].x - meanX);
-      stdY += (plotData[i].y - meanY) * (plotData[i].y - meanY);
-    }
-    stdX /= (plotData.length - 1);
-    stdY /= (plotData.length - 1);
-    stdX = Math.sqrt(stdX);
-    stdY = Math.sqrt(stdY);
     
     // Add padding to each of min/max X and min/maxY
     var widthPadding = (maxX - minX) * dataPaddingPercentage;
@@ -208,9 +240,9 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
     var numPointsInLine = 1000;
     var pointDelta = (maxX - minX) / numPointsInLine;
     var decisionBoundaryData = new Array();
-    var w0 = parseFloat(w[0]);
-    var w1 = parseFloat(w[xdim + 1]);
-    var w2 = parseFloat(w[ydim + 1]);
+    var w0 = w[0];
+    var w1 = w[xdim + 1];
+    var w2 = w[ydim + 1];
     for (var x = minX; x <= maxX; x += pointDelta) {
     
       var y = -(w0 + w1 * (x - meanX) / stdX) * stdY / w2 + meanY;

@@ -234,7 +234,13 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
     points.attr("cx", function (d) { return xScale(d.x); })
           .attr("cy", function (d) { return yScale(d.y); })
           .attr("r", 2)
-          .attr("fill", function (d) { return colorScale(classes.indexOf(d.dclass)); });
+          .attr("fill", function (d) {
+              if (d.dclass == d.pclass) {
+                return colorScale(0);
+              } else {
+                return colorScale(1);
+              }
+            });
           
     // Plot the decision boundary (just linear for now)
     var numPointsInLine = 1000;

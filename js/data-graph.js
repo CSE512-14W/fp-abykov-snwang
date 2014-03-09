@@ -241,32 +241,5 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
                 return colorScale(1);
               }
             });
-          
-    // Plot the decision boundary (just linear for now)
-    var numPointsInLine = 1000;
-    var pointDelta = (maxX - minX) / numPointsInLine;
-    var decisionBoundaryData = new Array();
-    var w0 = w[0];
-    var w1 = w[xdim + 1];
-    var w2 = w[ydim + 1];
-    for (var x = minX; x <= maxX; x += pointDelta) {
-    
-      var y = -(w0 + w1 * (x - meanX) / stdX) * stdY / w2 + meanY;
-      
-      if (y >= minY && y <= maxY) {
-        decisionBoundaryData.push({"dx":x, "dy":y});
-      }
-    }
-    
-    var decisionBoundary = plot.append("g")
-                               .selectAll("circle")
-                               .data(decisionBoundaryData)
-                               .enter()
-                               .append("circle");
-                     
-    decisionBoundary.attr("cx", function (d) { return xScale(d.dx); })
-                    .attr("cy", function (d) { return yScale(d.dy); })
-                    .attr("r", 1)
-                    .attr("fill", "black");
   }
 }

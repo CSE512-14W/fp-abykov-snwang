@@ -84,7 +84,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
   }
    
   // Plot the weight vector
-  plotData(0, 1, weightVectors[14409]);
+  plotData(0, 1, weightVectors[0]);
    
   function plotData(xdim, ydim, w) {
     // Plot the rectangle behind the actual plot
@@ -199,27 +199,62 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
               .attr("y2", function (d) { return yScale(d); })
               .attr("class", "gridline");
     
-    // Add labels to the axes
+    // Add labels with rectangles to the axes
+    var rectLabelPadding = 2;
+    
     var xlabel = plot.append("g");
+    var xLabelRect = xlabel.append("rect");
     xlabel.append("text")
           .text(featureNames[xdim][0])
           .attr("class", "label")
           .style("visibility", "hidden");
     var xLabelWidth = xlabel.select("text").node().getComputedTextLength();
+    var xLabelX = labelPadding + axesPadding + (plotWidth - xLabelWidth) / 2;
+    var xLabelY = plotHeight + axesPadding;
+    xLabelRect.attr("x", xLabelX - 2 * rectLabelPadding)
+              .attr("y", xLabelY - 10 - rectLabelPadding)
+              .attr("width", xLabelWidth + 4 * rectLabelPadding)
+              .attr("height", 12 + 2 * rectLabelPadding)
+              .attr("fill", "#eee")
+              .attr("fill-opacity", 0.5);
     xlabel.select("text")
-          .attr("x", labelPadding + axesPadding + (plotWidth - xLabelWidth) / 2)
-          .attr("y", plotHeight + axesPadding)
-          .style("visibility", "visible");
+          .attr("x", xLabelX)
+          .attr("y", xLabelY)
+          .style("cursor", "pointer")
+          .style("visibility", "visible")
+          .on('mouseover', function() {
+              // On mouse over we want to display a darker rectangle behind the label
+              xLabelRect.attr("fill", "#ddd");
+            })
+          .on('mouseout', function() {
+              xLabelRect.attr("fill", "#eee");
+            });
           
     var ylabel = plot.append("g");
+    var yLabelRect = ylabel.append("rect");
     ylabel.append("text")
           .text(featureNames[ydim][0])
           .attr("class", "label")
           .style("visibility", "hidden");
     var yLabelWidth = ylabel.select("text").node().getComputedTextLength();
+    var yLabelY = (plotHeight + yLabelWidth) / 2;
+    yLabelRect.attr("x", -10)
+              .attr("y", yLabelY - yLabelWidth - 2 * rectLabelPadding)
+              .attr("width", 12 + 2 * rectLabelPadding)
+              .attr("height", yLabelWidth + 4 * rectLabelPadding)
+              .attr("fill", "#eee")
+              .attr("fill-opacity", 0.5);
     ylabel.select("text")
-          .attr("transform", "translate(" + 0 + "," + ((plotHeight + yLabelWidth) / 2) + ")rotate(-90)")
-          .style("visibility", "visible");
+          .attr("transform", "translate(" + 0 + "," + yLabelY + ")rotate(-90)")
+          .style("cursor", "pointer")
+          .style("visibility", "visible")
+          .on('mouseover', function() {
+              // On mouse over we want to display a darker rectangle behind the label
+              yLabelRect.attr("fill", "#ddd");
+            })
+          .on('mouseout', function() {
+              yLabelRect.attr("fill", "#eee");
+            });
     
     // Add a color scale for the classes
     var colorScale = d3.scale.category10();
@@ -233,7 +268,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
     // Assign all of the point attributes
     points.attr("cx", function (d) { return xScale(d.x); })
           .attr("cy", function (d) { return yScale(d.y); })
-          .attr("r", 2)
+          .attr("r", 3)
           .attr("fill", function (d) {
               if (d.dclass == d.pclass) {
                 return colorScale(0);

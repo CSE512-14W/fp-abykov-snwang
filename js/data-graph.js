@@ -89,7 +89,8 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
                        .style("visibility", "hidden");
    
   for (var i = 0; i < numDim; i++) {
-    hiddenText.text(featureNames[i][0]);
+    hiddenText.text(featureNames[i][0])
+              .attr("class", "label");
     var featureWidth = hiddenText.node().getComputedTextLength();
     
     if (featureWidth > longestFeatureWidth) {
@@ -97,19 +98,27 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
     }
   }
    
-  // Plot the weight vector
-  plotData(4, 5, weightVectors[10000]);
-   
-  function plotData(xdim, ydim, w) {
-    // Plot the rectangle behind the actual plot
-    var plotWidth = width - axesPadding - labelPadding;
-    var plotHeight = topHeight - axesPadding - labelPadding;
-    var plotArea = plot.append("rect")
-                       .attr("x", axesPadding + labelPadding)
-                       .attr("width", plotWidth)
-                       .attr("height", plotHeight)
-                       .attr("fill", "#eee")
-                       .attr("opacity", 0.5);
+  // Plot the rectangle behind the actual plot
+  var plotWidth = width - axesPadding - labelPadding;
+  var plotHeight = topHeight - axesPadding - labelPadding;
+  var plotArea = plot.append("rect")
+                     .attr("x", axesPadding + labelPadding)
+                     .attr("width", plotWidth)
+                     .attr("height", plotHeight)
+                     .attr("fill", "#eee")
+                     .attr("opacity", 0.5);
+  
+  // Create a new group for plotting the points, axes, etc.
+  var plotGroupParent = plot.append("g");
+  
+  // Constants necessary for the axes labels
+  var textHeight = 12;
+  var rectLabelPadding = 2;
+  
+  var plotData = function(xdim, ydim, w) {
+    // Clear out anything plotted previously
+    plotGroupParent.selectAll("g").remove();
+    var plotGroup = plotGroupParent.append("g");
   
     // First we want to get the data for each dimension
     // Additionally we want to keep track of various measures for each axis
@@ -183,30 +192,30 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
     maxY = yScale.domain()[1];
     
     // Plot the axes
-    plot.append("g")
+    plotGroup.append("g")
         .attr("class", "axis")
         .attr("transform", "translate(0, " + plotHeight + ")")
         .call(xAxis);
-    plot.append("g")
+    plotGroup.append("g")
         .attr("class", "axis")
         .attr("transform", "translate(" + (axesPadding + labelPadding) + ", 0)")
         .call(yAxis);
         
     // Plot the gridlines
-    var xGridlines = plot.selectAll("vline")
-                         .data(xTicks)
-                         .enter()
-                         .append("line");
+    var xGridlines = plotGroup.selectAll("vline")
+                              .data(xTicks)
+                              .enter()
+                              .append("line");
     xGridlines.attr("x1", function (d) { return xScale(d); })
               .attr("y1", yScale(minY))
               .attr("x2", function (d) { return xScale(d); })
               .attr("y2", yScale(maxY))
               .attr("class", "gridline");
     
-    var yGridlines = plot.selectAll("hline")
-                         .data(yTicks)
-                         .enter()
-                         .append("line");
+    var yGridlines = plotGroup.selectAll("hline")
+                              .data(yTicks)
+                              .enter()
+                              .append("line");
     yGridlines.attr("x1", xScale(minX))
               .attr("y1", function (d) { return yScale(d); })
               .attr("x2", xScale(maxX))
@@ -217,10 +226,10 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
     var colorScale = d3.scale.category10();
         
     // Plot all of the points
-    var points = plot.selectAll("circle")
-                     .data(plotData)
-                     .enter()
-                     .append("circle");
+    var points = plotGroup.selectAll("circle")
+                          .data(plotData)
+                          .enter()
+                          .append("circle");
                      
     // Assign all of the point attributes
     points.attr("cx", function (d) { return xScale(d.x); })
@@ -234,36 +243,8 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
               }
             });
     
-    // Create a list of all the features to use for selecting the axes
-    var textHeight = 12;
-    var rectLabelPadding = 2;
-    
-    var featureSelectorGroup = plot.append("g")
-                                   .style("visibility", "hidden");
-    var featureSelectors = featureSelectorGroup.selectAll("rect")
-                                               .data(featureNames)
-                                               .enter()
-                                               .append("rect");
-                                               
-    featureSelectors.attr("y", function (d, i) { return i * textHeight; })
-                    .attr("width", (longestFeatureWidth + 2 * rectLabelPadding))
-                    .attr("height", textHeight)
-                    .style("cursor", "pointer")
-                    .attr("fill", "#eee")
-                    //.attr("stroke", "#ddd")
-                    .attr("fill-opacity", 0.8)
-                    .on("mouseover", function() {
-                        d3.select(this).attr("fill", "#ddd");
-                      })
-                    .on("mouseout", function() {
-                        d3.select(this).attr("fill", "#eee");
-                      })
-                    .on("click", function() {
-                        featureSelectorGroup.style("visibility", "hidden");
-                      });
-    
     // Add labels with rectangles to the axes    
-    var xlabel = plot.append("g");
+    var xlabel = plotGroup.append("g");
     var xLabelRect = xlabel.append("rect");
     xlabel.append("text")
           .text(featureNames[xdim][0])
@@ -291,11 +272,13 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
               xLabelRect.attr("fill", "#eee");
             })
           .on("click", function () {
-              featureSelectors.attr("x", labelPadding + axesPadding + (plotWidth - longestFeatureWidth) / 2);
+              var featureSelectorX = labelPadding + axesPadding + (plotWidth - longestFeatureWidth) / 2;
+              featureSelectors.attr("x", featureSelectorX);
+              featureSelectorText.attr("x", featureSelectorX + 2 * rectLabelPadding);
               featureSelectorGroup.style("visibility", "visible");
             });
           
-    var ylabel = plot.append("g");
+    var ylabel = plotGroup.append("g");
     var yLabelRect = ylabel.append("rect");
     ylabel.append("text")
           .text(featureNames[ydim][0])
@@ -321,8 +304,50 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
               yLabelRect.attr("fill", "#eee");
             })
           .on("click", function () {
-              featureSelectors.attr("x", labelPadding + axesPadding);
+              var featureSelectorX = labelPadding + axesPadding;
+              featureSelectors.attr("x", featureSelectorX);
+              featureSelectorText.attr("x", featureSelectorX + 2 * rectLabelPadding);
               featureSelectorGroup.style("visibility", "visible");
             });
   }
+  
+  // Plot the weight vector
+  plotData(0, 1, weightVectors[10000]);
+  
+  // Create a list of all the features to use for selecting the axes  
+  var featureSelectorGroup = plot.append("g")
+                                 .style("visibility", "hidden");
+  featureSelectors = featureSelectorGroup.selectAll("rect")
+                                             .data(featureNames)
+                                             .enter()
+                                             .append("rect");
+                                             
+  featureSelectors.attr("y", function (d, i) { return i * textHeight; })
+                  .attr("width", (longestFeatureWidth + 4 * rectLabelPadding))
+                  .attr("height", textHeight)
+                  .style("cursor", "pointer")
+                  .attr("fill", "#eee")
+                  //.attr("stroke", "#ddd")
+                  .attr("fill-opacity", 0.9)
+                  .on("mouseover", function() {
+                      d3.select(this).attr("fill", "#ddd");
+                    })
+                  .on("mouseout", function() {
+                      d3.select(this).attr("fill", "#eee");
+                    })
+                  .on("click", function(d, i) {
+                      featureSelectorGroup.style("visibility", "hidden");
+                      // Redraw with the given feature
+                      plotData(0, i, weightVectors[10000]);
+                    });
+                    
+  featureSelectorText = featureSelectorGroup.selectAll("text")
+                                                .data(featureNames)
+                                                .enter()
+                                                .append("text");
+  
+  featureSelectorText.attr("y", function (d, i) { return (i + 1) * textHeight - rectLabelPadding; })
+                     .attr("class", "label")
+                     .text(function(d) { return d[0]; })  
+                     .style("pointer-events", "none");
 }

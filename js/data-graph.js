@@ -125,7 +125,8 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
   
     // First we want to get the data for each dimension
     // Additionally we want to keep track of various measures for each axis
-    var plotData = new Array();
+    var plotCorrectData = new Array();
+    var plotMistakeData = new Array();
     var minX = featureMins[xdim];
     var maxX = featureMaxs[xdim];
     var minY = featureMins[ydim];
@@ -156,7 +157,11 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
       }
       var predClass = predSum > 0 ? classes[0] : classes[1];
       
-      plotData.push({"x":x, "y":y, "dclass":lineClass, "pclass":predClass});
+      if (lineClass == predClass) {
+        plotCorrectData.push({"x":x, "y":y});
+      } else {
+        plotMistakeData.push({"x":x, "y":y});
+      }
       
       if (classes.indexOf(lineClass) < 0) {
         classes.push(lineClass);
@@ -229,28 +234,29 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
     var colorScale = d3.scale.category10();
         
     // Plot all of the points
-    var points = plotGroup.selectAll("circle")
-                          .data(plotData)
-                          .enter()
-                          .append("circle");
+    var correctPoints = plotGroup.append("g")
+                                 .selectAll("circle")
+                                 .data(plotCorrectData)
+                                 .enter()
+                                 .append("circle");
                      
     // Assign all of the point attributes
-    points.attr("cx", function (d) { return xScale(d.x); })
-          .attr("cy", function (d) { return yScale(d.y); })
-          .attr("r", function (d) {
-              if (d.dclass == d.pclass) {
-                return 1;
-              } else {
-                return 4;
-              }
-            })
-          .attr("fill", function (d) {
-              if (d.dclass == d.pclass) {
-                return colorScale(0);
-              } else {
-                return colorScale(1);
-              }
-            });
+    correctPoints.attr("cx", function (d) { return xScale(d.x); })
+                 .attr("cy", function (d) { return yScale(d.y); })
+                 .attr("r", 1)
+                 .attr("fill", colorScale(0));
+    
+    var mistakePoints = plotGroup.append("g")
+                                 .selectAll("circle")
+                                 .data(plotMistakeData)
+                                 .enter()
+                                 .append("circle");
+                     
+    // Assign all of the point attributes
+    mistakePoints.attr("cx", function (d) { return xScale(d.x); })
+                 .attr("cy", function (d) { return yScale(d.y); })
+                 .attr("r", 3)
+                 .attr("fill", colorScale(1));
     
     // Add labels with rectangles to the axes    
     var xlabel = plotGroup.append("g");

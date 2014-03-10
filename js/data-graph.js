@@ -295,6 +295,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
                 selectedAxis = 0;
               } else {
                 featureSelectorGroup.style("visibility", "hidden");
+                selectedAxis = -1;
               }
             });
           
@@ -332,6 +333,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
                 selectedAxis = 1;
               } else {
                 featureSelectorGroup.style("visibility", "hidden");
+                selectedAxis = -1;
               }
             });
   }
@@ -368,6 +370,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
                       } else {
                         currentYDim = i;
                       }
+                      selectedAxis = -1;
                       plotData(currentXDim, currentYDim, weightVectors[10000]);
                     });
                     

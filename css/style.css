@@ -42,3 +42,35 @@ text {
   -ms-user-select: none;
   user-select: none;
 }
+
+.d3-tip {
+  font-family: Arial;
+  font: 10px sans-serif;
+  line-height: 1;
+  padding: 10px;
+  background: rgba(238, 238, 238, 0.95);
+  color: #000;
+  border-radius: 2px;
+  border: 2px solid #ccc;
+  border-color: rgba(204, 204, 204, 0.95);
+}
+
+/* Creates a small triangle extender for the tooltip */
+.d3-tip:after {
+  box-sizing: border-box;
+  display: inline;
+  font-size: 10px;
+  width: 100%;
+  line-height: 1;
+  color: rgba(204, 204, 204, 0.95);
+  content: "\25BC";
+  position: absolute;
+  text-align: center;
+}
+
+/* Style northward tooltips differently */
+.d3-tip.n:after {
+  margin: 0 0 0 0;
+  top: 100%;
+  left: 0;
+}

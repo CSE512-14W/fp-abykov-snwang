@@ -118,10 +118,25 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
   var currentXDim = 0;
   var currentYDim = 1;
   
+  // tooltip for point descriptions
+  var tip = d3.tip()
+              .attr("class", "d3-tip")
+              .offset([-9, 0])
+              .html(function (d) {
+                var lines = new Array();
+                lines.push("<b>Point:</b> (" + d.x + ", " + d.y + ")");
+                lines.push("<b>Actual class:</b> " + d.dclass);
+                lines.push("<b>Pred. class:</b> " + d.pclass);
+                return lines.join("<br />");
+              });
+  
   var plotData = function(xdim, ydim, w) {
     // Clear out anything plotted previously
     plotGroupParent.selectAll("g").remove();
     var plotGroup = plotGroupParent.append("g");
+    
+    // Setup the tooltip
+    plotGroup.call(tip);
   
     // First we want to get the data for each dimension
     // Additionally we want to keep track of various measures for each axis
@@ -158,9 +173,9 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
       var predClass = predSum > 0 ? classes[0] : classes[1];
       
       if (lineClass == predClass) {
-        plotCorrectData.push({"x":x, "y":y});
+        plotCorrectData.push({"x":x, "y":y, "dclass":lineClass, "pclass":predClass});
       } else {
-        plotMistakeData.push({"x":x, "y":y});
+        plotMistakeData.push({"x":x, "y":y, "dclass":lineClass, "pclass":predClass});
       }
       
       if (classes.indexOf(lineClass) < 0) {
@@ -255,8 +270,14 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
     // Assign all of the point attributes
     mistakePoints.attr("cx", function (d) { return xScale(d.x); })
                  .attr("cy", function (d) { return yScale(d.y); })
-                 .attr("r", 3)
-                 .attr("fill", colorScale(1));
+                 .attr("r", 4)
+                 .attr("fill", colorScale(1))
+                 .on("mouseover", function(d) {
+                      tip.show(d);
+                    })
+                 .on("mouseout", function() {
+                      tip.hide();
+                    });
     
     // Add labels with rectangles to the axes    
     var xlabel = plotGroup.append("g");

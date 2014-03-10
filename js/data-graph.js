@@ -114,6 +114,9 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
   // Constants necessary for the axes labels
   var textHeight = 12;
   var rectLabelPadding = 2;
+  var selectedAxis = -1;
+  var currentXDim = 0;
+  var currentYDim = 1;
   
   var plotData = function(xdim, ydim, w) {
     // Clear out anything plotted previously
@@ -234,7 +237,13 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
     // Assign all of the point attributes
     points.attr("cx", function (d) { return xScale(d.x); })
           .attr("cy", function (d) { return yScale(d.y); })
-          .attr("r", 3)
+          .attr("r", function (d) {
+              if (d.dclass == d.pclass) {
+                return 1;
+              } else {
+                return 4;
+              }
+            })
           .attr("fill", function (d) {
               if (d.dclass == d.pclass) {
                 return colorScale(0);
@@ -272,10 +281,15 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
               xLabelRect.attr("fill", "#eee");
             })
           .on("click", function () {
-              var featureSelectorX = labelPadding + axesPadding + (plotWidth - longestFeatureWidth) / 2;
-              featureSelectors.attr("x", featureSelectorX);
-              featureSelectorText.attr("x", featureSelectorX + 2 * rectLabelPadding);
-              featureSelectorGroup.style("visibility", "visible");
+              if (selectedAxis != 0) {
+                var featureSelectorX = labelPadding + axesPadding + (plotWidth - longestFeatureWidth) / 2;
+                featureSelectors.attr("x", featureSelectorX);
+                featureSelectorText.attr("x", featureSelectorX + 2 * rectLabelPadding);
+                featureSelectorGroup.style("visibility", "visible");
+                selectedAxis = 0;
+              } else {
+                featureSelectorGroup.style("visibility", "hidden");
+              }
             });
           
     var ylabel = plotGroup.append("g");
@@ -304,15 +318,20 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
               yLabelRect.attr("fill", "#eee");
             })
           .on("click", function () {
-              var featureSelectorX = labelPadding + axesPadding;
-              featureSelectors.attr("x", featureSelectorX);
-              featureSelectorText.attr("x", featureSelectorX + 2 * rectLabelPadding);
-              featureSelectorGroup.style("visibility", "visible");
+              if (selectedAxis != 1) {
+                var featureSelectorX = labelPadding + axesPadding;
+                featureSelectors.attr("x", featureSelectorX);
+                featureSelectorText.attr("x", featureSelectorX + 2 * rectLabelPadding);
+                featureSelectorGroup.style("visibility", "visible");
+                selectedAxis = 1;
+              } else {
+                featureSelectorGroup.style("visibility", "hidden");
+              }
             });
   }
   
   // Plot the weight vector
-  plotData(0, 1, weightVectors[10000]);
+  plotData(currentXDim, currentYDim, weightVectors[10000]);
   
   // Create a list of all the features to use for selecting the axes  
   var featureSelectorGroup = plot.append("g")
@@ -338,7 +357,12 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
                   .on("click", function(d, i) {
                       featureSelectorGroup.style("visibility", "hidden");
                       // Redraw with the given feature
-                      plotData(0, i, weightVectors[10000]);
+                      if (selectedAxis == 0) {
+                        currentXDim = i;
+                      } else {
+                        currentYDim = i;
+                      }
+                      plotData(currentXDim, currentYDim, weightVectors[10000]);
                     });
                     
   featureSelectorText = featureSelectorGroup.selectAll("text")

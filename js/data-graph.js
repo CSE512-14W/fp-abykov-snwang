@@ -256,9 +256,12 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
                                  .append("circle");
                      
     // Assign all of the point attributes
+    var correctPointRadius = 1;
+    var mistakePointRadius = 3;
+    
     correctPoints.attr("cx", function (d) { return xScale(d.x); })
                  .attr("cy", function (d) { return yScale(d.y); })
-                 .attr("r", 1)
+                 .attr("r", correctPointRadius)
                  .attr("fill", colorScale(0));
     
     var mistakePoints = plotGroup.append("g")
@@ -270,7 +273,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
     // Assign all of the point attributes
     mistakePoints.attr("cx", function (d) { return xScale(d.x); })
                  .attr("cy", function (d) { return yScale(d.y); })
-                 .attr("r", 4)
+                 .attr("r", mistakePointRadius)
                  .attr("fill", colorScale(1))
                  .on("mouseover", function(d) {
                       tip.show(d);
@@ -357,6 +360,49 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
                 selectedAxis = -1;
               }
             });
+            
+    // Add a legend to the bottom right
+    var mistakePredLegend = plotGroup.append("g");
+    mistakePredLegend.append("text")
+                     .text("Incorrect Classification")
+                     .attr("class", "label")
+                     .style("visibility", "hidden");
+             
+    var mistakePredictionWidth = mistakePredLegend.select("text").node().getComputedTextLength();
+    var curX = width - 4 - mistakePredictionWidth;
+    
+    mistakePredLegend.select("text")
+                     .attr("x", curX)
+                     .attr("y", plotHeight + axesPadding)
+                     .style("visibility", "visible");
+                     
+    curX = curX - 4 - mistakePointRadius;
+    plotGroup.append("circle")
+             .attr("cx", curX)
+             .attr("cy", plotHeight + axesPadding - 3)
+             .attr("r", mistakePointRadius)
+             .attr("fill", colorScale(1));
+             
+    var correctPredLegend = plotGroup.append("g");
+    correctPredLegend.append("text")
+                     .text("Correct Classification")
+                     .attr("class", "label")
+                     .style("visibility", "hidden");
+             
+    var correctPredictionWidth = correctPredLegend.select("text").node().getComputedTextLength();
+    curX = curX - correctPredictionWidth - 20 - mistakePointRadius;
+    
+    correctPredLegend.select("text")
+                     .attr("x", curX)
+                     .attr("y", plotHeight + axesPadding)
+                     .style("visibility", "visible");
+                     
+    curX = curX - 4 - correctPointRadius;
+    plotGroup.append("circle")
+             .attr("cx", curX)
+             .attr("cy", plotHeight + axesPadding - 3)
+             .attr("r", correctPointRadius)
+             .attr("fill", colorScale(0));
   }
   
   // Plot the weight vector

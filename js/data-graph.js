@@ -711,7 +711,14 @@ function drawElements(err, unparsedData, unparsedFeatureNames,
                       // Redraw with the given type
                       var currentTimeSeries = i;
                       yAxisSelected = false;
-                      yLabel.select("text").text(timeSeriesNames[currentTimeSeries]);
+                      label = yLabel.select("text");
+                      label.text(timeSeriesNames[currentTimeSeries]);
+                      var newYLabelWidth = yLabel.select("text").node().getComputedTextLength();
+                      var newYLabelY = (bottomPlotHeight + newYLabelWidth) / 2;
+                      label.attr("transform", "translate(" + 5 + "," + newYLabelY + ")rotate(-90)")
+                      yLabelRect
+                        .attr("y", newYLabelY - newYLabelWidth - 2 * rectLabelPadding)
+                        .attr("height", newYLabelWidth + 4 * rectLabelPadding);
                       drawDist(timeSeriesTypes[i]);
                     });
 

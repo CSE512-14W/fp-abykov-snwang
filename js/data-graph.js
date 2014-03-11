@@ -1,5 +1,5 @@
 // Partition the visualization space.
-var margin = {top: 40, right: 30, bottom: 20, left: 30, between:20},
+var margin = {top: 50, right: 30, bottom: 20, left: 30, between:20},
     width = 1280 - margin.left - margin.right,
     height = 800 - margin.top - margin.bottom,
     topHeight = Math.round(height * 0.7),
@@ -10,6 +10,20 @@ var fullChart = d3.select("body")
                   .attr("width", width + margin.left + margin.right)
                   .attr("height", height + margin.top + margin.bottom);
 
+// Add a title
+var title = fullChart.append("g")
+              .attr("transform", "translate(" + margin.left + "," + margin.top / 3 + ")")
+title.append("text")
+     .text("Visualizing an SVM algorithm")
+     .style("font-family", "Arial Black")
+     .style("font-size", "18px")
+     .style("visibility", "hidden");
+var titleWidth = title.select("text").node().getComputedTextLength();
+title.select("text")
+     .attr("x", width / 2 - titleWidth / 2)
+     .attr("y", margin.top / 5)
+     .style("visibility", "visible");
+                  
 var plot = fullChart.append("g")
                     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 var bottom = fullChart.append("g").attr("transform", "translate(" + margin.left + "," + (topHeight + margin.top + margin.between) + ")");

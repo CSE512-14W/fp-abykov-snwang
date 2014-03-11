@@ -572,6 +572,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames,
     var yAxisMinValue = 0;
     var yAxisMaxValue = maxValue;
     var useArea = true;
+    var colorType = "incorrect";
 
     x.domain([0, data.length]);
     y.domain([yAxisMinValue, yAxisMaxValue]);
@@ -587,6 +588,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames,
       y.domain([yAxisMinValue, yAxisMaxValue]);
       xAxisYValue = y(0);
       useArea = false;
+      colorType = "correct";
     }
 
     var xAxis = d3.svg.axis()
@@ -606,8 +608,9 @@ function drawElements(err, unparsedData, unparsedFeatureNames,
         .x(function (d, i) { return x(i); })
         .y1(function (d, i) { return y(d); });
       dist.datum(data)
-        // TODO: change color scale
-        .attr("fill", colorScale("incorrect"))
+        .attr("fill", colorScale(colorType))
+        .attr("stroke-width", 1)
+        .attr("stroke", colorScale(colorType))
         .attr("d", area);
     } else {
       curve
@@ -616,7 +619,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames,
       dist.datum(data)
         .attr("fill", "none")
         .attr("stroke-width", 1)
-        .attr("stroke", colorScale("incorrect"))
+        .attr("stroke", colorScale(colorType))
         .attr("d", curve);
     }
 

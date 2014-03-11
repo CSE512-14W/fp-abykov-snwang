@@ -1,5 +1,5 @@
 // Partition the visualization space.
-var margin = {top: 40, right: 30, bottom: 20, left: 30},
+var margin = {top: 40, right: 30, bottom: 20, left: 30, between:20},
     width = 1280 - margin.left - margin.right,
     height = 800 - margin.top - margin.bottom,
     topHeight = Math.round(height * 0.7),
@@ -12,7 +12,7 @@ var fullChart = d3.select("body")
 
 var plot = fullChart.append("g")
                     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-var bottom = fullChart.append("g").attr("transform", "translate(" + margin.left + "," + (topHeight + margin.top) + ")");
+var bottom = fullChart.append("g").attr("transform", "translate(" + margin.left + "," + (topHeight + margin.top + margin.between) + ")");
                     
 // The padding for the axes
 var axesPadding = 40;
@@ -25,7 +25,9 @@ var dataPaddingPercentage = 0.02;
                     
 // Load in all of the data
 queue()
-  .defer(d3.text, "data/biodeg.csv")
+  .defer(d3.text, "data/biodeg-train.csv")
+  .defer(d3.text, "data/biodeg-validation.csv")
+  .defer(d3.text, "data/biodeg-test.csv")
   .defer(d3.text, "data/biodeg-features.txt")
   .defer(d3.text, "data/biodeg-w.csv")
   .defer(d3.text, "data/biodeg-errors.csv")
@@ -35,10 +37,66 @@ queue()
   .defer(d3.text, "data/biodeg-classes.txt")
   .await(drawElements);
   
-function drawElements(err, unparsedData, unparsedFeatureNames,
-    unparsedWeightVectors, unparsedErrors, unparsedTrainAccuracies,
-    unparsedValidationAccuracies, unparsedTestAccuracies, unparsedClassNames) {
-  var parsedData = d3.csv.parseRows(unparsedData);
+function calculateDatasetProperties(data, numDim) {
+  // To make life easier for us later we can compute the min, max, mean and std of each dimension here
+  var featureMins = new Array(numDim);
+  var featureMaxs = new Array(numDim);
+  var featureMeans = new Array(numDim);
+  var featureStds = new Array(numDim);
+   
+  // Initialize everything
+  for (var i = 0; i < numDim; i++) {
+    featureMins[i] = data[0][i];
+    featureMaxs[i] = data[0][i];
+    featureMeans[i] = 0;
+    featureStds[i] = 0;
+  }
+   
+  for (var i = 0; i < data.length; i++) {
+    for (var j = 0; j < numDim; j++) {
+      var val = parseFloat(data[i][j]);
+      data[i][j] = val;
+      featureMeans[j] += val;
+      if (val < featureMins[j]) {
+        featureMins[j] = val;
+      }
+      if (val > featureMaxs[j]) {
+        featureMaxs[j] = val;
+      }
+    }
+  }
+  
+  // Compute the means
+  for (var i = 0; i < numDim; i++) {
+    featureMeans[i] /= data.length;
+  }
+  
+  // We need one more pass through the data to calculate the std
+  for (var i = 0; i < data.length; i++) {
+    for (var j = 0; j < numDim; j++) {
+      var diff = data[i][j] - featureMeans[j];
+      featureStds[j] += diff * diff;
+    }
+  }
+  
+  for (var i = 0; i < numDim; i++) {
+    featureStds[i] /= (data.length - 1);
+    featureStds[i] = Math.sqrt(featureStds[i]);
+  }
+  
+  var dataMeasures = {mins:featureMins, maxs:featureMaxs, means:featureMeans, stds:featureStds};
+  return dataMeasures;
+}
+  
+function drawElements(err, unparsedTrainData, unparsedValidationData, 
+    unparsedTestData, unparsedFeatureNames, unparsedWeightVectors, 
+    unparsedErrors, unparsedTrainAccuracies, unparsedValidationAccuracies, 
+    unparsedTestAccuracies, unparsedClassNames) {
+    
+  var parsedTrainData = d3.csv.parseRows(unparsedTrainData);
+  var parsedValidationData = d3.csv.parseRows(unparsedValidationData);
+  var parsedTestData = d3.csv.parseRows(unparsedTestData);
+  
   var featureNames = d3.csv.parseRows(unparsedFeatureNames);
   var errors = d3.csv.parseRows(unparsedErrors).map(function (x) {
     return Math.round(parseFloat(x[0]));
@@ -60,53 +118,11 @@ function drawElements(err, unparsedData, unparsedFeatureNames,
   for (var i = 1; i < errors.length; i++) {
     errorDeltas[i] = errors[i] - errors[i-1];
   }
-   
-  // To make life easier for us later we can compute the min, max, mean and std of each dimension here
-  var numDim = parsedData[0].length - 1;
-  var featureMins = new Array(numDim);
-  var featureMaxs = new Array(numDim);
-  var featureMeans = new Array(numDim);
-  var featureStds = new Array(numDim);
-   
-  // Initialize everything
-  for (var i = 0; i < numDim; i++) {
-    featureMins[i] = parsedData[0][i];
-    featureMaxs[i] = parsedData[0][i];
-    featureMeans[i] = 0;
-    featureStds[i] = 0;
-  }
-   
-  for (var i = 0; i < parsedData.length; i++) {
-    for (var j = 0; j < numDim; j++) {
-      var val = parseFloat(parsedData[i][j]);
-      parsedData[i][j] = val;
-      featureMeans[j] += val;
-      if (val < featureMins[j]) {
-        featureMins[j] = val;
-      }
-      if (val > featureMaxs[j]) {
-        featureMaxs[j] = val;
-      }
-    }
-  }
   
-  // Compute the means
-  for (var i = 0; i < numDim; i++) {
-    featureMeans[i] /= parsedData.length;
-  }
-  
-  // We need one more pass through the data to calculate the std
-  for (var i = 0; i < parsedData.length; i++) {
-    for (var j = 0; j < numDim; j++) {
-      var diff = parsedData[i][j] - featureMeans[j];
-      featureStds[j] += diff * diff;
-    }
-  }
-  
-  for (var i = 0; i < numDim; i++) {
-    featureStds[i] /= (parsedData.length - 1);
-    featureStds[i] = Math.sqrt(featureStds[i]);
-  }
+  var numDim = parsedTrainData[0].length - 1;
+  var trainDataMeasures = calculateDatasetProperties(parsedTrainData, numDim);
+  var validationDataMeasures = calculateDatasetProperties(parsedValidationData, numDim);
+  var testDataMeasures = calculateDatasetProperties(parsedTestData, numDim);
   
   // It is helpful to calculate the length of the longest feature text here
   var longestFeatureWidth = 0;
@@ -148,6 +164,9 @@ function drawElements(err, unparsedData, unparsedFeatureNames,
   var currentXDim = 0;
   var currentYDim = 1;
   var currentIndex = 0;
+  var currentTimeSeries = 0;
+  var tsDatasets = [parsedTrainData, parsedTrainData, parsedTrainData, parsedValidationData, parsedTestData];
+  var tsDataMeasures = [trainDataMeasures, trainDataMeasures, trainDataMeasures, validationDataMeasures, testDataMeasures];
   
   // tooltip for point descriptions
   var tip = d3.tip()
@@ -164,12 +183,19 @@ function drawElements(err, unparsedData, unparsedFeatureNames,
   // Add a color scale for the classes
   var colorScale = d3.scale.category10().domain(["correct", "incorrect"]);
   
-  var plotData = function(xdim, ydim, w, replot) {
+  var plotData = function(replot) {
     // Clear out anything plotted previously if we are fully replotting
     if (replot) {
       plotGroupParent.selectAll("g").remove();
       plotGroup = plotGroupParent.append("g");
     }
+
+    // Get all of the current variables
+    var data = tsDatasets[currentTimeSeries];
+    var dataMeasures = tsDataMeasures[currentTimeSeries];
+    var xdim = currentXDim;
+    var ydim = currentYDim;
+    var w = weightVectors[currentIndex];
     
     // Setup the tooltip
     plotGroup.call(tip);
@@ -178,32 +204,32 @@ function drawElements(err, unparsedData, unparsedFeatureNames,
     // Additionally we want to keep track of various measures for each axis
     var plotCorrectData = new Array();
     var plotMistakeData = new Array();
-    var minX = featureMins[xdim];
-    var maxX = featureMaxs[xdim];
-    var minY = featureMins[ydim];
-    var maxY = featureMaxs[ydim];
-    var meanX = featureMeans[xdim];
-    var meanY = featureMeans[ydim];
-    var stdX = featureStds[xdim];
-    var stdY = featureStds[ydim];
-    var numDim = parsedData[0].length - 1;
+    var minX = dataMeasures.mins[xdim];
+    var maxX = dataMeasures.maxs[xdim];
+    var minY = dataMeasures.mins[ydim];
+    var maxY = dataMeasures.maxs[ydim];
+    var meanX = dataMeasures.means[xdim];
+    var meanY = dataMeasures.means[ydim];
+    var stdX = dataMeasures.stds[xdim];
+    var stdY = dataMeasures.stds[ydim];
+    var numDim = data[0].length - 1;
     
     // Convert the w vector into floats
     for (var i = 0; i < numDim + 1; i++) {
       w[i] = parseFloat(w[i]);
     }
     
-    for (var i = 0; i < parsedData.length; i++) {
-      var x = parsedData[i][xdim];
-      var y = parsedData[i][ydim];
+    for (var i = 0; i < data.length; i++) {
+      var x = data[i][xdim];
+      var y = data[i][ydim];
       
       // Also keep track of each class we encounter. This will be the last token of each line
-      var lineClass = parsedData[i][numDim];
+      var lineClass = data[i][numDim];
       
       // Calculate the predicted class given the w vector
       var predSum = w[0];
       for (var j = 0; j < numDim; j++) {
-        var dataPoint = (parsedData[i][j] - featureMeans[j]) / featureStds[j];
+        var dataPoint = (data[i][j] - dataMeasures.means[j]) / dataMeasures.stds[j];
         predSum += w[j + 1] * dataPoint;
       }
       var predClass = predSum > 0 ? classes[0] : classes[1];
@@ -288,8 +314,8 @@ function drawElements(err, unparsedData, unparsedFeatureNames,
     
     // Plot all of the points
     correctPointsGroup.selectAll("circle")
-                      .data(plotCorrectData)
-                      .exit()
+                      //.data(plotCorrectData)
+                      //.exit()
                       .remove();
                                           
     var correctPoints = correctPointsGroup.selectAll("circle")
@@ -307,8 +333,8 @@ function drawElements(err, unparsedData, unparsedFeatureNames,
                  .attr("fill", colorScale("correct"));
     
     mistakePointsGroup.selectAll("circle")
-                      .data(plotMistakeData)
-                      .exit()
+                      //.data(plotMistakeData)
+                      //.exit()
                       .remove();
                                           
     var mistakePoints = mistakePointsGroup.selectAll("circle")
@@ -456,7 +482,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames,
   }
   
   // Plot the weight vector
-  plotData(currentXDim, currentYDim, weightVectors[currentIndex], true);
+  plotData(true);
   
   // Create a list of all the features to use for selecting the axes
   var maxFeaturesInList = 20;
@@ -496,7 +522,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames,
                         currentYDim = i;
                       }
                       selectedAxis = -1;
-                      plotData(currentXDim, currentYDim, weightVectors[currentIndex], true);
+                      plotData(true);
                     });
 
   /** Slider bar and distribution chart **/
@@ -657,7 +683,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames,
       
       // Replot the data
       currentIndex = Math.floor(index);
-      plotData(currentXDim, currentYDim, weightVectors[currentIndex], false)
+      plotData(false);
     }
   }
 
@@ -709,7 +735,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames,
                   .on("click", function(d, i) {
                       timeSeriesSelectorGroup.style("visibility", "hidden");
                       // Redraw with the given type
-                      var currentTimeSeries = i;
+                      currentTimeSeries = i;
                       yAxisSelected = false;
                       label = yLabel.select("text");
                       label.text(timeSeriesNames[currentTimeSeries]);
@@ -719,6 +745,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames,
                       yLabelRect
                         .attr("y", newYLabelY - newYLabelWidth - 2 * rectLabelPadding)
                         .attr("height", newYLabelWidth + 4 * rectLabelPadding);
+                      plotData(true);
                       drawDist(timeSeriesTypes[i]);
                     });
 

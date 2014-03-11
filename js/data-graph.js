@@ -39,9 +39,10 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
   var weightVectors = d3.csv.parseRows(unparsedWeightVectors);
   var classes = d3.csv.parseRows(unparsedClassNames);
 
-  var errorDeltas = new Array(errors.length - 1);
+  var errorDeltas = new Array(errors.length);
+  errorDeltas[0] = 0;
   for (var i = 1; i < errors.length; i++) {
-    errorDeltas[i-1] = errors[i] - errors[i-1];
+    errorDeltas[i] = errors[i] - errors[i-1];
   }
    
   // To make life easier for us later we can compute the min, max, mean and std of each dimension here
@@ -549,8 +550,16 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
       .attr("r", 9);
 
   function drawDist(data) {
+    var xAxisYValue = bottomPlotHeight;
+    var yAxisMinValue = 0;
+    var useArea = true;
+    if (d3.min(data) < 0) {
+      xAxisYValue /= 2;
+      yAxisMinValue = d3.min(data);
+      useArea = false;
+    }
     x.domain([0, data.length]);
-    y.domain([d3.min(data), d3.max(data)]);
+    y.domain([yAxisMinValue, d3.max(data)]);
 
     var xAxis = d3.svg.axis()
       .scale(x);
@@ -559,25 +568,30 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
       .orient("left");
     //.call(yAxis);
     distXAxis
-      .attr("transform", "translate(0," + (bottomPlotHeight/2) + ")")
+      .attr("transform", "translate(0," + (xAxisYValue) + ")")
       .call(xAxis.orient("bottom"));
     distYAxis
       .attr("transform", "translate(" + x(0) + ",0)")
       .call(yAxis);
 
-    area
-      .x(function (d, i) { return x(i); })
-      .y1(function (d, i) { return y(d); });
-    curve
-      .x(function (d, i) { return x(i); })
-      .y(function (d, i) { return y(d); });
-    dist.datum(data)
-      // TODO: change color scale
-      //.attr("fill", colorScale("incorrect"))
-      .attr("fill", "none")
-      .attr("stroke-width", 0.5)
-      .attr("stroke", colorScale("incorrect"))
-      .attr("d", curve);
+    if (useArea) {
+      area
+        .x(function (d, i) { return x(i); })
+        .y1(function (d, i) { return y(d); });
+      dist.datum(data)
+        // TODO: change color scale
+        .attr("fill", colorScale("incorrect"))
+        .attr("d", area);
+    } else {
+      curve
+        .x(function (d, i) { return x(i); })
+        .y(function (d, i) { return y(d); });
+      dist.datum(data)
+        .attr("fill", "none")
+        .attr("stroke-width", 0.5)
+        .attr("stroke", colorScale("incorrect"))
+        .attr("d", curve);
+    }
 
     // draw the slider and indicator line
     line
@@ -593,7 +607,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
     slider.selectAll(".extent,.resize")
       .remove();
 
-    handle.attr("transform", "translate(" + x(0) + "," + (bottomPlotHeight/2) + ")");
+    handle.attr("transform", "translate(" + x(0) + "," + (xAxisYValue) + ")");
 
     function brushed() {
       var value = brush.extent()[0];
@@ -616,45 +630,95 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
       plotData(currentXDim, currentYDim, weightVectors[currentIndex], false)
     }
   }
-  //drawDist(errors);
-  drawDist(errorDeltas);
 
-  //var ylabel = bottom.append("g");
-  //var yLabelRect = ylabel.append("rect");
-  //ylabel.append("text")
-        ////.text(featureNames[ydim][0])
-        //.text("Number of errors")
-        //.attr("class", "label")
-        //.style("visibility", "hidden");
-  //var yLabelWidth = ylabel.select("text").node().getComputedTextLength();
-  //var yLabelY = (plotHeight + yLabelWidth) / 2;
-  //yLabelRect.attr("x", -5)
-            //.attr("y", yLabelY - yLabelWidth - 2 * rectLabelPadding)
-            //.attr("width", textHeight + 2 * rectLabelPadding)
-            //.attr("height", yLabelWidth + 4 * rectLabelPadding)
-            //.attr("fill", "#eee")
-            //.attr("fill-opacity", 0.5);
-  //ylabel.select("text")
-        //.attr("transform", "translate(" + 5 + "," + yLabelY + ")rotate(-90)")
-        //.style("cursor", "pointer")
-        //.style("visibility", "visible")
-        //.on('mouseover', function() {
-            //// On mouse over we want to display a darker rectangle behind the label
-            //yLabelRect.attr("fill", "#ddd");
-          //})
-        //.on('mouseout', function() {
-            //yLabelRect.attr("fill", "#eee");
-          //})
-        //.on("click", function () {
-            //if (selectedAxis != 1) {
-              //var featureSelectorX = labelPadding + axesPadding;
-              //featureSelectors.attr("x", featureSelectorX);
-              //featureSelectorText.attr("x", featureSelectorX + 2 * rectLabelPadding);
-              //featureSelectorGroup.style("visibility", "visible");
-              //selectedAxis = 1;
-            //} else {
-              //featureSelectorGroup.style("visibility", "hidden");
-              //selectedAxis = -1;
-            //}
-          //});
+  var timeSeriesTypes = [errors, errorDeltas];
+  drawDist(timeSeriesTypes[0]);
+  //drawDist(timeSeriesTypes[1]);
+
+  var timeSeriesNames = ["Number of errors", "Change in errors"];
+  var longestNameWidth = 0;
+  for (var i = 0; i < timeSeriesNames.length; i++) {
+    hiddenText.text(timeSeriesNames[i])
+              .attr("class", "label");
+    var nameWidth = hiddenText.node().getComputedTextLength();
+
+    if (nameWidth > longestNameWidth) {
+      longestNameWidth = nameWidth;
+    }
+  }
+  var maxTypesInList = timeSeriesNames.length;
+  var timeSeriesSelectorGroup = d3.select("body").append("div")
+    .style("left", "0px")
+    .style("top", "0px")
+    .style("width", (longestNameWidth + 10 * rectLabelPadding) + "px")
+    .style("height", (textHeight * maxTypesInList) + "px")
+    .style("position", "absolute")
+    .style("visibility", "hidden");
+
+  // Use a table to keep track of the features
+  var timeSeriesSelectorTable = timeSeriesSelectorGroup.append("table")
+    .attr("bgcolor", "#eee")
+    .style("opacity", 0.9);
+  var timeSeriesTableRows = timeSeriesSelectorTable.selectAll("tr")
+    .data(timeSeriesNames)
+    .enter()
+    .append("tr");
+
+  var yAxisSelected = false;
+  timeSeriesTableRows.text(function (d) { return d; })
+                  .style("cursor", "pointer")
+                  .attr("class", "label")
+                  .on("mouseover", function() {
+                      d3.select(this).attr("bgcolor", "#ddd");
+                    })
+                  .on("mouseout", function() {
+                      d3.select(this).attr("bgcolor", "#eee");
+                    })
+                  .on("click", function(d, i) {
+                      timeSeriesSelectorGroup.style("visibility", "hidden");
+                      // Redraw with the given type
+                      var currentTimeSeries = i;
+                      yAxisSelected = false;
+                      yLabel.select("text").text(timeSeriesNames[currentTimeSeries]);
+                      drawDist(timeSeriesTypes[i]);
+                    });
+
+  var yLabel = bottom.append("g");
+  var yLabelRect = yLabel.append("rect");
+  yLabel.append("text")
+        .text(timeSeriesNames[0])
+        .attr("class", "label")
+        .style("visibility", "hidden");
+  var yLabelWidth = yLabel.select("text").node().getComputedTextLength();
+  var yLabelY = (bottomPlotHeight + yLabelWidth) / 2;
+  yLabelRect.attr("x", -5)
+            .attr("y", yLabelY - yLabelWidth - 2 * rectLabelPadding)
+            .attr("width", textHeight + 2 * rectLabelPadding)
+            .attr("height", yLabelWidth + 4 * rectLabelPadding)
+            .attr("fill", "#eee")
+            .attr("fill-opacity", 0.5);
+  yLabel.select("text")
+        .attr("transform", "translate(" + 5 + "," + yLabelY + ")rotate(-90)")
+        .style("cursor", "pointer")
+        .style("visibility", "visible")
+        .on('mouseover', function() {
+            // On mouse over we want to display a darker rectangle behind the label
+            yLabelRect.attr("fill", "#ddd");
+          })
+        .on('mouseout', function() {
+            yLabelRect.attr("fill", "#eee");
+          })
+        .on("click", function () {
+            if (!yAxisSelected) {
+              var timeSeriesSelectorX = labelPadding + axesPadding + margin.left;
+              var timeSeriesSelectorY = margin.top + topHeight + (bottomPlotHeight - textHeight * maxTypesInList) / 2;
+              timeSeriesSelectorGroup.style("left", timeSeriesSelectorX + "px")
+                                  .style("top", timeSeriesSelectorY + "px")
+                                  .style("visibility", "visible");
+              yAxisSelected = true;
+            } else {
+              timeSeriesSelectorGroup.style("visibility", "hidden");
+              yAxisSelected = false;
+            }
+          });
 }

@@ -651,9 +651,9 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
 
     // draw the slider and indicator line
     line
-      .attr("x1", 0 + x(0))
+      .attr("x1", 0 + x(currentIndex))
       //.attr("y1", y(data[0]))
-      .attr("x2", 0 + x(0));
+      .attr("x2", 0 + x(currentIndex));
       //.attr("y2", bottomPlotHeight/2);
     brush.x(x)
         //.extent([0, 0])

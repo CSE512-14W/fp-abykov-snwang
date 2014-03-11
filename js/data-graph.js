@@ -138,7 +138,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
                 lines.push("<b>Pred. class:</b> " + d.pclass);
                 return lines.join("<br />");
               });
-
+              
   // Add a color scale for the classes
   var colorScale = d3.scale.category10().domain(["correct", "incorrect"]);
   
@@ -337,10 +337,11 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
               })
             .on("click", function () {
                 if (selectedAxis != 0) {
-                  var featureSelectorX = labelPadding + axesPadding + (plotWidth - longestFeatureWidth) / 2;
-                  featureSelectors.attr("x", featureSelectorX);
-                  featureSelectorText.attr("x", featureSelectorX + 2 * rectLabelPadding);
-                  featureSelectorGroup.style("visibility", "visible");
+                  var featureSelectorX = margin.left + labelPadding + axesPadding + (plotWidth - (longestFeatureWidth + 10 * rectLabelPadding)) / 2;
+                  var featureSelectorY = margin.top + labelPadding + plotHeight - textHeight * maxFeaturesInList;
+                  featureSelectorGroup.style("left", featureSelectorX + "px")
+                                      .style("top", featureSelectorY + "px")
+                                      .style("visibility", "visible");
                   selectedAxis = 0;
                 } else {
                   featureSelectorGroup.style("visibility", "hidden");
@@ -375,10 +376,11 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
               })
             .on("click", function () {
                 if (selectedAxis != 1) {
-                  var featureSelectorX = labelPadding + axesPadding;
-                  featureSelectors.attr("x", featureSelectorX);
-                  featureSelectorText.attr("x", featureSelectorX + 2 * rectLabelPadding);
-                  featureSelectorGroup.style("visibility", "visible");
+                  var featureSelectorX = labelPadding + axesPadding + margin.left;
+                  var featureSelectorY = margin.top + (plotHeight - textHeight * maxFeaturesInList) / 2;
+                  featureSelectorGroup.style("left", featureSelectorX + "px")
+                                      .style("top", featureSelectorY + "px")
+                                      .style("visibility", "visible");
                   selectedAxis = 1;
                 } else {
                   featureSelectorGroup.style("visibility", "hidden");
@@ -434,26 +436,34 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
   // Plot the weight vector
   plotData(currentXDim, currentYDim, weightVectors[currentIndex], true);
   
-  // Create a list of all the features to use for selecting the axes  
-  var featureSelectorGroup = plot.append("g")
-                                 .style("visibility", "hidden");
-  featureSelectors = featureSelectorGroup.selectAll("rect")
+  // Create a list of all the features to use for selecting the axes
+  var maxFeaturesInList = 20;
+  var featureSelectorGroup = d3.select("body").append("div")
+                                              .style("left", "0px")
+                                              .style("top", "0px")
+                                              .style("width", (longestFeatureWidth + 10 * rectLabelPadding) + "px")
+                                              .style("height", (textHeight * maxFeaturesInList) + "px")
+                                              .style("position", "absolute")
+                                              .style("visibility", "hidden")
+                                              .style("overflow", "auto");
+  
+  // Use a table to keep track of the features
+  var featureSelectorTable = featureSelectorGroup.append("table")
+                                                 .attr("bgcolor", "#eee")
+                                                 .style("opacity", 0.9);
+  var featureTableRows = featureSelectorTable.selectAll("tr")
                                              .data(featureNames)
                                              .enter()
-                                             .append("rect");
-                                             
-  featureSelectors.attr("y", function (d, i) { return i * textHeight; })
-                  .attr("width", (longestFeatureWidth + 4 * rectLabelPadding))
-                  .attr("height", textHeight)
+                                             .append("tr");
+
+  featureTableRows.text(function (d) { return d[0]; })
                   .style("cursor", "pointer")
-                  .attr("fill", "#eee")
-                  //.attr("stroke", "#ddd")
-                  .attr("fill-opacity", 0.9)
+                  .attr("class", "label")
                   .on("mouseover", function() {
-                      d3.select(this).attr("fill", "#ddd");
+                      d3.select(this).attr("bgcolor", "#ddd");
                     })
                   .on("mouseout", function() {
-                      d3.select(this).attr("fill", "#eee");
+                      d3.select(this).attr("bgcolor", "#eee");
                     })
                   .on("click", function(d, i) {
                       featureSelectorGroup.style("visibility", "hidden");
@@ -466,16 +476,6 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
                       selectedAxis = -1;
                       plotData(currentXDim, currentYDim, weightVectors[currentIndex], true);
                     });
-                    
-  featureSelectorText = featureSelectorGroup.selectAll("text")
-                                                .data(featureNames)
-                                                .enter()
-                                                .append("text");
-  
-  featureSelectorText.attr("y", function (d, i) { return (i + 1) * textHeight - rectLabelPadding; })
-                     .attr("class", "label")
-                     .text(function(d) { return d[0]; })  
-                     .style("pointer-events", "none");
 
   /** Slider bar and distribution chart **/
   // plot the distribution

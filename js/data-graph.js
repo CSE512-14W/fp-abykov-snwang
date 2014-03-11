@@ -29,13 +29,29 @@ queue()
   .defer(d3.text, "data/biodeg-features.txt")
   .defer(d3.text, "data/biodeg-w.csv")
   .defer(d3.text, "data/biodeg-errors.csv")
+  .defer(d3.text, "data/biodeg-train-accuracies.csv")
+  .defer(d3.text, "data/biodeg-validation-accuracies.csv")
+  .defer(d3.text, "data/biodeg-test-accuracies.csv")
   .defer(d3.text, "data/biodeg-classes.txt")
   .await(drawElements);
   
-function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVectors, unparsedErrors, unparsedClassNames) {
+function drawElements(err, unparsedData, unparsedFeatureNames,
+    unparsedWeightVectors, unparsedErrors, unparsedTrainAccuracies,
+    unparsedValidationAccuracies, unparsedTestAccuracies, unparsedClassNames) {
   var parsedData = d3.csv.parseRows(unparsedData);
   var featureNames = d3.csv.parseRows(unparsedFeatureNames);
-  var errors = d3.csv.parseRows(unparsedErrors).map(function (x) { return Math.round(parseFloat(x[0])); });
+  var errors = d3.csv.parseRows(unparsedErrors).map(function (x) {
+    return Math.round(parseFloat(x[0]));
+  });
+  var trainAccuracies = d3.csv.parseRows(unparsedTrainAccuracies).map(function (x) {
+    return parseFloat(x[0]);
+  });
+  var validationAccuracies = d3.csv.parseRows(unparsedValidationAccuracies).map(function (x) {
+    return parseFloat(x[0]);
+  });
+  var testAccuracies = d3.csv.parseRows(unparsedTestAccuracies).map(function (x) {
+    return parseFloat(x[0]);
+  });
   var weightVectors = d3.csv.parseRows(unparsedWeightVectors);
   var classes = d3.csv.parseRows(unparsedClassNames);
 
@@ -550,17 +566,24 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
       .attr("r", 9);
 
   function drawDist(data) {
+    var minValue = d3.min(data);
+    var maxValue = d3.max(data);
     var xAxisYValue = bottomPlotHeight;
     var yAxisMinValue = 0;
-    var yAxisMaxValue = d3.max(data);
+    var yAxisMaxValue = maxValue;
     var useArea = true;
 
     x.domain([0, data.length]);
     y.domain([yAxisMinValue, yAxisMaxValue]);
 
-    if (d3.min(data) < 0) {
-      yAxisMinValue = Math.min(d3.min(data), -d3.max(data));
-      yAxisMaxValue = Math.max(-d3.min(data), d3.max(data));
+    if (minValue < 0) {
+      yAxisMinValue = Math.min(minValue, -maxValue);
+      yAxisMaxValue = Math.max(-minValue, maxValue);
+      y.domain([yAxisMinValue, yAxisMaxValue]);
+      xAxisYValue = y(0);
+      useArea = false;
+    } else if (minValue >= 0 && maxValue <= 1) {
+      yAxisMaxValue = 1;
       y.domain([yAxisMinValue, yAxisMaxValue]);
       xAxisYValue = y(0);
       useArea = false;
@@ -592,7 +615,7 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
         .y(function (d, i) { return y(d); });
       dist.datum(data)
         .attr("fill", "none")
-        .attr("stroke-width", 0.5)
+        .attr("stroke-width", 1)
         .attr("stroke", colorScale("incorrect"))
         .attr("d", curve);
     }
@@ -635,11 +658,13 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
     }
   }
 
-  var timeSeriesTypes = [errors, errorDeltas];
+  var timeSeriesTypes = [errors, errorDeltas, trainAccuracies,
+      validationAccuracies, testAccuracies];
   drawDist(timeSeriesTypes[0]);
   //drawDist(timeSeriesTypes[1]);
 
-  var timeSeriesNames = ["Number of errors", "Change in errors"];
+  var timeSeriesNames = ["Number of errors", "Change in errors",
+      "Training set accuracy", "Validation set accuracy", "Test set accuracy"];
   var longestNameWidth = 0;
   for (var i = 0; i < timeSeriesNames.length; i++) {
     hiddenText.text(timeSeriesNames[i])

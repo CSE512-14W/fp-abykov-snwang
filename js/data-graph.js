@@ -552,21 +552,25 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
   function drawDist(data) {
     var xAxisYValue = bottomPlotHeight;
     var yAxisMinValue = 0;
+    var yAxisMaxValue = d3.max(data);
     var useArea = true;
+
+    x.domain([0, data.length]);
+    y.domain([yAxisMinValue, yAxisMaxValue]);
+
     if (d3.min(data) < 0) {
-      xAxisYValue /= 2;
-      yAxisMinValue = d3.min(data);
+      yAxisMinValue = Math.min(d3.min(data), -d3.max(data));
+      yAxisMaxValue = Math.max(-d3.min(data), d3.max(data));
+      y.domain([yAxisMinValue, yAxisMaxValue]);
+      xAxisYValue = y(0);
       useArea = false;
     }
-    x.domain([0, data.length]);
-    y.domain([yAxisMinValue, d3.max(data)]);
 
     var xAxis = d3.svg.axis()
       .scale(x);
     var yAxis = d3.svg.axis()
       .scale(y)
       .orient("left");
-    //.call(yAxis);
     distXAxis
       .attr("transform", "translate(0," + (xAxisYValue) + ")")
       .call(xAxis.orient("bottom"));

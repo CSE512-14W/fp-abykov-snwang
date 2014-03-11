@@ -38,6 +38,11 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
   var errors = d3.csv.parseRows(unparsedErrors).map(function (x) { return Math.round(parseFloat(x[0])); });
   var weightVectors = d3.csv.parseRows(unparsedWeightVectors);
   var classes = d3.csv.parseRows(unparsedClassNames);
+
+  var errorDeltas = new Array(errors.length - 1);
+  for (var i = 1; i < errors.length; i++) {
+    errorDeltas[i-1] = errors[i] - errors[i-1];
+  }
    
   // To make life easier for us later we can compute the min, max, mean and std of each dimension here
   var numDim = parsedData[0].length - 1;
@@ -487,77 +492,132 @@ function drawElements(err, unparsedData, unparsedFeatureNames, unparsedWeightVec
   var dist = bottomChart.append("path");
   var distHeight = bottomPlotHeight;//botHeight * (3.0/3);
   var x = d3.scale.linear()
-    .domain([0, errors.length])
+    //.domain([0, data.length])
     .range([1, plotWidth])
     .clamp(true);
   var y = d3.scale.linear()
-    .domain([0, d3.max(errors)])
+    //.domain([0, d3.max(data)])
     .range([bottomPlotHeight, 0]);
 
-  var xAxis = d3.svg.axis()
-    .scale(x);
-  var yAxis = d3.svg.axis()
-    .scale(y)
-    .orient("left");
-  bottomChart.append("g")
+  //var xAxis = d3.svg.axis()
+    //.scale(x);
+  //var yAxis = d3.svg.axis()
+    //.scale(y)
+    //.orient("left");
+  var distXAxis = bottomChart.append("g")
     .attr("class", "x axis")
-    .attr("transform", "translate(0," + bottomPlotHeight + ")")
-    .call(xAxis.orient("bottom"));
-  bottomChart.append("g")
+    .attr("transform", "translate(0," + bottomPlotHeight + ")");
+    //.call(xAxis.orient("bottom"));
+  var distYAxis = bottomChart.append("g")
     .attr("class", "y axis")
-    .attr("transform", "translate(" + x(0) + ",0)")
-    .call(yAxis);
+    .attr("transform", "translate(" + x(0) + ",0)");
+    //.call(yAxis);
 
   var area = d3.svg.area()
     .x(function (d, i) { return x(i); })
     .y0(distHeight)
     .y1(function (d, i) { return y(d); });
-  dist.datum(errors)
-    .attr("fill", colorScale("incorrect"))
-    .attr("d", area);
+  var curve = d3.svg.line()
+    .interpolate("linear")
+    .x(function (d, i) { return x(i); })
+    .y(function (d, i) { return y(d); });
+  //dist.datum(data)
+    //.attr("fill", colorScale("incorrect"))
+    //.attr("d", area);
 
   // draw the slider and indicator line
   var line = bottomChart.append("line")
     .attr("class", "sliderLine")
-    .attr("x1", 0 + x(0))
+    //.attr("x1", 0 + x(0))
     .attr("y1", 0)
-    .attr("x2", 0 + x(0))
+    //.attr("x2", 0 + x(0))
     .attr("y2", bottomPlotHeight);
   var brush = d3.svg.brush()
-      .x(x)
-      .extent([0, 0])
-      .on("brush", brushed);
+      //.x(x)
+      .extent([0, 0]);
+      //.on("brush", brushed);
   var slider = bottomChart.append("g")
-    .attr("class", "slider")
-    .call(brush);
+    .attr("class", "slider");
+    //.call(brush);
 
   slider.selectAll(".extent,.resize")
     .remove();
 
   var handle = slider.append("circle")
       .attr("class", "handle")
-      .attr("transform", "translate(" + x(0) + "," + bottomPlotHeight + ")")
+      //.attr("transform", "translate(" + x(0) + "," + bottomPlotHeight + ")")
       .attr("r", 9);
 
-  function brushed() {
-    var value = brush.extent()[0];
+  function drawDist(data) {
+    x.domain([0, data.length]);
+    y.domain([d3.min(data), d3.max(data)]);
 
-    if (d3.event.sourceEvent) { // not a programmatic event
-      value = x.invert(d3.mouse(this)[0]);
-      brush.extent([value, value]);
+    var xAxis = d3.svg.axis()
+      .scale(x);
+    var yAxis = d3.svg.axis()
+      .scale(y)
+      .orient("left");
+    //.call(yAxis);
+    distXAxis
+      .attr("transform", "translate(0," + (bottomPlotHeight/2) + ")")
+      .call(xAxis.orient("bottom"));
+    distYAxis
+      .attr("transform", "translate(" + x(0) + ",0)")
+      .call(yAxis);
+
+    area
+      .x(function (d, i) { return x(i); })
+      .y1(function (d, i) { return y(d); });
+    curve
+      .x(function (d, i) { return x(i); })
+      .y(function (d, i) { return y(d); });
+    dist.datum(data)
+      // TODO: change color scale
+      //.attr("fill", colorScale("incorrect"))
+      .attr("fill", "none")
+      .attr("stroke-width", 0.5)
+      .attr("stroke", colorScale("incorrect"))
+      .attr("d", curve);
+
+    // draw the slider and indicator line
+    line
+      .attr("x1", 0 + x(0))
+      //.attr("y1", y(data[0]))
+      .attr("x2", 0 + x(0));
+      //.attr("y2", bottomPlotHeight/2);
+    brush.x(x)
+        //.extent([0, 0])
+        .on("brush", brushed);
+    slider.call(brush);
+
+    slider.selectAll(".extent,.resize")
+      .remove();
+
+    handle.attr("transform", "translate(" + x(0) + "," + (bottomPlotHeight/2) + ")");
+
+    function brushed() {
+      var value = brush.extent()[0];
+
+      if (d3.event.sourceEvent) { // not a programmatic event
+        value = x.invert(d3.mouse(this)[0]);
+        brush.extent([value, value]);
+      }
+
+      handle.attr("cx", x(value));
+      var index = Math.min(data.length - 1, Math.max(0, value));
+      //var lineHeight = y(0.5 * (data[Math.floor(index)] + data[Math.ceil(index)]));
+      var lineHeight = y(data[Math.round(index)]);
+      line.attr("x1", x(index))
+        .attr("x2", x(index))
+        //.attr("y1", lineHeight);
+      
+      // Replot the data
+      currentIndex = Math.floor(index);
+      plotData(currentXDim, currentYDim, weightVectors[currentIndex], false)
     }
-
-    handle.attr("cx", x(value));
-    var index = Math.min(errors.length - 1, Math.max(0, value));
-    var lineHeight = y(0.5 * (errors[Math.floor(index)] + errors[Math.ceil(index)]));
-    line.attr("x1", x(index))
-      .attr("x2", x(index))
-      .attr("y1", lineHeight);
-    
-    // Replot the data
-    currentIndex = Math.floor(index);
-    plotData(currentXDim, currentYDim, weightVectors[currentIndex], false)
   }
+  //drawDist(errors);
+  drawDist(errorDeltas);
 
   //var ylabel = bottom.append("g");
   //var yLabelRect = ylabel.append("rect");

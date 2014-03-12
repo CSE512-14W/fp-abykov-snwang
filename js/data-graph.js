@@ -359,17 +359,47 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                                           .append("circle");
                      
     // Assign all of the point attributes
-    var correctPointRadius = 1;
-    var mistakePointRadius = 3;
+    var correctPointRadius = 2;
+    var mistakePointRadius = 4;
     
     correctPoints.attr("cx", function (d) { return xScale(d.x); })
                  .attr("cy", function (d) { return yScale(d.y); })
                  .attr("r", correctPointRadius)
-                 .attr("fill", colorScale("correct"));
+                 .attr("fill-opacity", 0)
+                 .attr("stroke", function (d) { 
+                      if (d.dclass == classes[0])
+                        return colorScale("correct");
+                      else
+                        return colorScale("incorrect");
+                    });
     
+    mistakePointsGroup.selectAll("path")
+                      .remove();
+                                          
+    var mistakePaths = mistakePointsGroup.selectAll("path")
+                                         .data(plotMistakeData)
+                                         .enter()
+                                         .append("path");
+                     
+    // Assign all of the point attributes
+    mistakePaths.attr("d", function (d) {
+                    var x = xScale(d.x);
+                    var y = yScale(d.y);
+                    return "M " + (x - mistakePointRadius) + " " + (y + mistakePointRadius) 
+                        + " L " + (x + mistakePointRadius) + " " + (y - mistakePointRadius)
+                        + " M " + (x - mistakePointRadius) + " " + (y - mistakePointRadius) 
+                        + " L " + (x + mistakePointRadius) + " " + (y + mistakePointRadius);
+                  })
+                .attr("stroke-width", 2)
+                .attr("stroke", function (d) { 
+                    if (d.dclass == classes[0])
+                      return colorScale("correct");
+                    else
+                      return colorScale("incorrect");
+                  });
+    
+    // Creates circles behind the paths for better tooltip response
     mistakePointsGroup.selectAll("circle")
-                      //.data(plotMistakeData)
-                      //.exit()
                       .remove();
                                           
     var mistakePoints = mistakePointsGroup.selectAll("circle")
@@ -381,7 +411,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
     mistakePoints.attr("cx", function (d) { return xScale(d.x); })
                  .attr("cy", function (d) { return yScale(d.y); })
                  .attr("r", mistakePointRadius)
-                 .attr("fill", colorScale("incorrect"))
+                 .attr("fill-opacity", 0.0)
                  .on("mouseover", function(d) {
                       tip.show(d);
                     })

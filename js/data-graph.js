@@ -175,12 +175,33 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   var textHeight = 12;
   var rectLabelPadding = 2;
   var selectedAxis = -1;
-  var currentXDim = 0;
-  var currentYDim = 1;
   var currentIndex = 0;
   var currentTimeSeries = 0;
   var tsDatasets = [parsedTrainData, parsedTrainData, parsedTrainData, parsedValidationData, parsedTestData];
   var tsDataMeasures = [trainDataMeasures, trainDataMeasures, trainDataMeasures, validationDataMeasures, testDataMeasures];
+  
+  // Start with the dimensions of highest weight
+  var numW = weightVectors.length;
+  var lastW = weightVectors[numW - 1].map(function (x) {
+      return parseFloat(x);
+    });
+  var sortW = new Array();
+  for (var i = 0; i < numDim; i++) {
+    sortW.push({v:Math.abs(lastW[i + 1]), index:i});
+  }
+  
+  function compareW(a, b) {
+    if (a.v < b.v)
+      return 1;
+    if (a.v > b.v)
+      return -1;
+    return 0;
+  }
+  
+  var sortW = sortW.sort(compareW);
+  
+  var currentXDim = sortW[0].index;
+  var currentYDim = sortW[1].index;
   
   // tooltip for point descriptions
   var tip = d3.tip()

@@ -223,7 +223,13 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
               });
               
   // Add a color scale for the classes
-  var colorScale = d3.scale.category10().domain(["correct", "incorrect"]);
+  var colorScale = d3.scale.ordinal().domain(
+      ["class-1-correct", "class-1-incorrect", "class-2-correct", "class-2-incorrect", "black"]
+  );
+  //colorScale.range(["#ff7f0e", "#998F3D", "#1f77b4", "#14B1CC", "#262626"])
+
+  // reverse the color of correct and incorrect for each class
+  colorScale.range(["#998F3D", "#ff7f0e", "#14B1CC", "#1f77b4", "#262626"])
   
   var plotData = function(replot) {
     // Clear out anything plotted previously if we are fully replotting
@@ -375,9 +381,9 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                  .attr("fill-opacity", 0)
                  .attr("stroke", function (d) { 
                       if (d.dclass == classes[0])
-                        return colorScale("correct");
+                        return colorScale("class-1-correct");
                       else
-                        return colorScale("incorrect");
+                        return colorScale("class-2-correct");
                     });
     
     mistakePointsGroup.selectAll("path")
@@ -397,9 +403,9 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                 .attr("stroke-width", 2)
                 .attr("stroke", function (d) { 
                     if (d.dclass == classes[0])
-                      return colorScale("correct");
+                      return colorScale("class-1-incorrect");
                     else
-                      return colorScale("incorrect");
+                      return colorScale("class-2-incorrect");
                   });
     
     // Creates circles behind the paths for better tooltip response
@@ -533,7 +539,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                 })
                .attr("stroke-width", 2)
                .attr("stroke", function () { 
-                    return colorScale("correct");
+                    return colorScale("class-1-incorrect");
                 });
   
       plotGroup.append("path")               
@@ -542,7 +548,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                 })
                .attr("stroke-width", 2)
                .attr("stroke", function () { 
-                    return colorScale("incorrect");
+                    return colorScale("class-2-incorrect");
                 });
   
   
@@ -572,14 +578,14 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                .attr("cy", plotHeight + axesPadding - 11)
                .attr("r", correctPointRadius)
                .attr("fill-opacity", 0)
-               .attr("stroke", colorScale("correct"));
+               .attr("stroke", colorScale("class-1-correct"));
                
       plotGroup.append("circle")
                .attr("cx", curX)
                .attr("cy", plotHeight + axesPadding + 5)
                .attr("r", correctPointRadius)
                .attr("fill-opacity", 0)
-               .attr("stroke", colorScale("incorrect"));
+               .attr("stroke", colorScale("class-2-correct"));
     }
   }
   
@@ -718,6 +724,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
       useArea = false;
       colorType = "correct";
     }
+    colorType = "black";
 
     var xAxis = d3.svg.axis()
       .scale(x);
@@ -772,7 +779,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
 
       if (d3.event.sourceEvent) { // not a programmatic event
         value = x.invert(d3.mouse(this)[0]);
-        brush.extent([value, value]);
+        brush.extent([value-1, value-1]);
       }
 
       handle.attr("cx", x(value));

@@ -102,6 +102,13 @@ function calculateDatasetProperties(data, numDim) {
   return dataMeasures;
 }
   
+function drawCross(x, y, radius) {
+  return "M " + (x - radius) + " " + (y + radius) 
+      + " L " + (x + radius) + " " + (y - radius)
+      + " M " + (x - radius) + " " + (y - radius) 
+      + " L " + (x + radius) + " " + (y + radius);
+}
+  
 function drawElements(err, unparsedTrainData, unparsedValidationData, 
     unparsedTestData, unparsedFeatureNames, unparsedWeightVectors, 
     unparsedErrors, unparsedTrainAccuracies, unparsedValidationAccuracies, 
@@ -385,10 +392,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
     mistakePaths.attr("d", function (d) {
                     var x = xScale(d.x);
                     var y = yScale(d.y);
-                    return "M " + (x - mistakePointRadius) + " " + (y + mistakePointRadius) 
-                        + " L " + (x + mistakePointRadius) + " " + (y - mistakePointRadius)
-                        + " M " + (x - mistakePointRadius) + " " + (y - mistakePointRadius) 
-                        + " L " + (x + mistakePointRadius) + " " + (y + mistakePointRadius);
+                    return drawCross(x, y, mistakePointRadius);
                   })
                 .attr("stroke-width", 2)
                 .attr("stroke", function (d) { 
@@ -504,28 +508,47 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
       // Add a legend to the bottom right
       var mistakePredLegend = plotGroup.append("g");
       mistakePredLegend.append("text")
-                       .text("Incorrect Classification")
+                       .text("Incorrect " + classes[0] + " Classification")
                        .attr("class", "label")
                        .style("visibility", "hidden");
                
       var mistakePredictionWidth = mistakePredLegend.select("text").node().getComputedTextLength();
-      var curX = width - 4 - mistakePredictionWidth;
+      var curX = width - 8 - mistakePredictionWidth;
       
       mistakePredLegend.select("text")
                        .attr("x", curX)
-                       .attr("y", plotHeight + axesPadding)
+                       .attr("y", plotHeight + axesPadding - 8)
                        .style("visibility", "visible");
-                       
+      
+      mistakePredLegend.append("text")
+                       .text("Incorrect " + classes[1] + " Classification")
+                       .attr("class", "label")
+                       .attr("x", curX)
+                       .attr("y", plotHeight + axesPadding + 8);
+                 
       curX = curX - 4 - mistakePointRadius;
-      plotGroup.append("circle")
-               .attr("cx", curX)
-               .attr("cy", plotHeight + axesPadding - 3)
-               .attr("r", mistakePointRadius)
-               .attr("fill", colorScale("incorrect"));
-               
+      plotGroup.append("path")               
+               .attr("d", function () {
+                  return drawCross(curX, plotHeight + axesPadding - 11, mistakePointRadius);
+                })
+               .attr("stroke-width", 2)
+               .attr("stroke", function () { 
+                    return colorScale("correct");
+                });
+  
+      plotGroup.append("path")               
+               .attr("d", function () {
+                  return drawCross(curX, plotHeight + axesPadding + 5, mistakePointRadius);
+                })
+               .attr("stroke-width", 2)
+               .attr("stroke", function () { 
+                    return colorScale("incorrect");
+                });
+  
+  
       var correctPredLegend = plotGroup.append("g");
       correctPredLegend.append("text")
-                       .text("Correct Classification")
+                       .text("Correct " + classes[0] + " Classification")
                        .attr("class", "label")
                        .style("visibility", "hidden");
                
@@ -534,15 +557,29 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
       
       correctPredLegend.select("text")
                        .attr("x", curX)
-                       .attr("y", plotHeight + axesPadding)
+                       .attr("y", plotHeight + axesPadding - 8)
                        .style("visibility", "visible");
+                       
+      correctPredLegend.append("text")
+                       .text("Correct " + classes[1] + " Classification")
+                       .attr("class", "label")
+                       .attr("x", curX)
+                       .attr("y", plotHeight + axesPadding + 8);
                        
       curX = curX - 4 - correctPointRadius;
       plotGroup.append("circle")
                .attr("cx", curX)
-               .attr("cy", plotHeight + axesPadding - 3)
+               .attr("cy", plotHeight + axesPadding - 11)
                .attr("r", correctPointRadius)
-               .attr("fill", colorScale("correct"));
+               .attr("fill-opacity", 0)
+               .attr("stroke", colorScale("correct"));
+               
+      plotGroup.append("circle")
+               .attr("cx", curX)
+               .attr("cy", plotHeight + axesPadding + 5)
+               .attr("r", correctPointRadius)
+               .attr("fill-opacity", 0)
+               .attr("stroke", colorScale("incorrect"));
     }
   }
   

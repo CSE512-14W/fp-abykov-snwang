@@ -1,3 +1,11 @@
+var webSocket = new WebSocket("ws://localhost:9999");
+webSocket.onmessage = function (event) {
+  console.log(JSON.parse(event.data));
+}
+webSocket.onopen = function () {
+  console.log("opened");
+  webSocket.send("test");
+}
 // Partition the visualization space.
 var margin = {top: 50, right: 30, bottom: 20, left: 30, between:20},
     width = 1280 - margin.left - margin.right,

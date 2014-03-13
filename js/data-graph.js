@@ -240,7 +240,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   //colorScale.range(["#ff7f0e", "#998F3D", "#1f77b4", "#14B1CC", "#262626"])
 
   // reverse the color of correct and incorrect for each class
-  colorScale.range(["#998F3D", "#ff7f0e", "#14B1CC", "#1f77b4", "#262626"])
+  colorScale.range(["#998F3D", "#ff7f0e", "#14B1CC", "#1f77b4", "#4D9E62"])
   
   var plotData = function(replot) {
     // Clear out anything plotted previously if we are fully replotting

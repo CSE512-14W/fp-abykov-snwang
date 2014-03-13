@@ -196,7 +196,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   var tsDataMeasures = [trainDataMeasures, trainDataMeasures, trainDataMeasures, validationDataMeasures, testDataMeasures];
   
   // Start with the dimensions of highest weight
-  var numW = weightVectors.length;
+  /*var numW = weightVectors.length;
   var lastW = weightVectors[numW - 1].map(function (x) {
       return parseFloat(x);
     });
@@ -216,7 +216,10 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   var sortW = sortW.sort(compareW);
   
   var currentXDim = sortW[0].index;
-  var currentYDim = sortW[1].index;
+  var currentYDim = sortW[1].index;*/
+  
+  var currentXDim = 12;
+  var currentYDim = 1;
   
   // tooltip for point descriptions
   var tip = d3.tip()
@@ -368,16 +371,12 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
       mistakePointsGroup = plotGroup.append("g");
     }
     
-    // Plot all of the points
-    correctPointsGroup.selectAll("circle")
-                      //.data(plotCorrectData)
-                      //.exit()
-                      .remove();
-                                          
+    // Plot all of the points             
     var correctPoints = correctPointsGroup.selectAll("circle")
-                                          .data(plotCorrectData)
-                                          .enter()
-                                          .append("circle");
+                                          .data(plotCorrectData);
+                                          
+    correctPoints.enter()
+                 .append("circle");
                      
     // Assign all of the point attributes
     var correctPointRadius = 2;
@@ -394,13 +393,13 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                         return colorScale("class-2-correct");
                     });
     
-    mistakePointsGroup.selectAll("path")
-                      .remove();
+    correctPoints.exit().remove();
                                           
     var mistakePaths = mistakePointsGroup.selectAll("path")
-                                         .data(plotMistakeData)
-                                         .enter()
-                                         .append("path");
+                                         .data(plotMistakeData);
+                                         
+    mistakePaths.enter()
+                .append("path");
                      
     // Assign all of the point attributes
     mistakePaths.attr("d", function (d) {
@@ -416,14 +415,14 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                       return colorScale("class-2-incorrect");
                   });
     
-    // Creates circles behind the paths for better tooltip response
-    mistakePointsGroup.selectAll("circle")
-                      .remove();
-                                          
+    mistakePaths.exit().remove();
+    
+    // Creates circles behind the paths for better tooltip response                                          
     var mistakePoints = mistakePointsGroup.selectAll("circle")
-                                          .data(plotMistakeData)
-                                          .enter()
-                                          .append("circle");
+                                          .data(plotMistakeData);
+                                          
+    mistakePoints.enter()
+                 .append("circle");
                      
     // Assign all of the point attributes
     mistakePoints.attr("cx", function (d) { return xScale(d.x); })
@@ -436,6 +435,8 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                  .on("mouseout", function() {
                       tip.hide();
                     });
+    
+    mistakePoints.exit().remove();
     
     if (replot) {
       // Add labels with rectangles to the axes    

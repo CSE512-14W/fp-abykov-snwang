@@ -1,11 +1,3 @@
-var webSocket = new WebSocket("ws://localhost:9999");
-webSocket.onmessage = function (event) {
-  console.log(JSON.parse(event.data));
-}
-webSocket.onopen = function () {
-  console.log("opened");
-  webSocket.send("test");
-}
 // Partition the visualization space.
 var margin = {top: 50, right: 30, bottom: 20, left: 30, between:20},
     width = 1280 - margin.left - margin.right,
@@ -59,6 +51,7 @@ queue()
   .defer(d3.text, "data/biodeg-classes.txt")
   .await(drawElements);
   
+
 function calculateDatasetProperties(data, numDim) {
   // To make life easier for us later we can compute the min, max, mean and std of each dimension here
   var featureMins = new Array(numDim);
@@ -116,6 +109,7 @@ function drawCross(x, y, radius) {
       + " M " + (x - radius) + " " + (y - radius) 
       + " L " + (x + radius) + " " + (y + radius);
 }
+var updateVisualization = function () {};
   
 function drawElements(err, unparsedTrainData, unparsedValidationData, 
     unparsedTestData, unparsedFeatureNames, unparsedWeightVectors, 
@@ -127,26 +121,51 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   var parsedTestData = d3.csv.parseRows(unparsedTestData);
   
   var featureNames = d3.csv.parseRows(unparsedFeatureNames);
-  var errors = d3.csv.parseRows(unparsedErrors).map(function (x) {
-    return Math.round(parseFloat(x[0]));
-  });
-  var trainAccuracies = d3.csv.parseRows(unparsedTrainAccuracies).map(function (x) {
-    return parseFloat(x[0]);
-  });
-  var validationAccuracies = d3.csv.parseRows(unparsedValidationAccuracies).map(function (x) {
-    return parseFloat(x[0]);
-  });
-  var testAccuracies = d3.csv.parseRows(unparsedTestAccuracies).map(function (x) {
-    return parseFloat(x[0]);
-  });
-  var weightVectors = d3.csv.parseRows(unparsedWeightVectors);
+  //var errors = d3.csv.parseRows(unparsedErrors).map(function (x) {
+    //return Math.round(parseFloat(x[0]));
+  //});
+  //var trainAccuracies = d3.csv.parseRows(unparsedTrainAccuracies).map(function (x) {
+    //return parseFloat(x[0]);
+  //});
+  //var validationAccuracies = d3.csv.parseRows(unparsedValidationAccuracies).map(function (x) {
+    //return parseFloat(x[0]);
+  //});
+  //var testAccuracies = d3.csv.parseRows(unparsedTestAccuracies).map(function (x) {
+    //return parseFloat(x[0]);
+  //});
+  //var weightVectors = d3.csv.parseRows(unparsedWeightVectors);
   var classes = d3.csv.parseRows(unparsedClassNames);
 
-  var errorDeltas = new Array(errors.length);
-  errorDeltas[0] = 0;
-  for (var i = 1; i < errors.length; i++) {
-    errorDeltas[i] = errors[i] - errors[i-1];
-  }
+  //var errorDeltas = new Array(errors.length);
+  //errorDeltas[0] = 0;
+  //for (var i = 1; i < errors.length; i++) {
+    //errorDeltas[i] = errors[i] - errors[i-1];
+  //}
+  trainAccuracies = [0.5];
+  validationAccuracies = [0.5];
+  testAccuracies = [0.5];
+  weightVectors = [[]];
+  for (var i = 0; i < parsedTrainData.length; i++)
+    weightVectors[0][i] = Math.random()*2 - 1;
+  //weightVectors = weightVectors[0];
+  errors = [0.5 * parsedTrainData.length];
+  errorDeltas = [0];
+
+  updateVisualization = function (iterationData) {
+    var i = iterationData[0],
+        w = iterationData[1],
+        numErrors = iterationData[2],
+        trainAccuracy = iterationData[3],
+        validationAccuracy = iterationData[4],
+        testAccuracy = iterationData[5];
+    weightVectors.push(w);
+    errorDeltas.push(numErrors - errors[errors.length - 1]);
+    errors.push(numErrors);
+    trainAccuracies.push(trainAccuracy);
+    validationAccuracies.push(validationAccuracy);
+    testAccuracies.push(testAccuracy);
+    drawDist(timeSeriesTypes[currentTimeSeries]);
+  };
   
   var numDim = parsedTrainData[0].length - 1;
   var trainDataMeasures = calculateDatasetProperties(parsedTrainData, numDim);
@@ -782,6 +801,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
       .remove();
 
     handle.attr("transform", "translate(" + x(0) + "," + (xAxisYValue) + ")");
+    handle.attr("cx", x(currentIndex));
 
     function brushed() {
       var value = brush.extent()[0];
@@ -805,8 +825,9 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
     }
   }
 
-  var timeSeriesTypes = [errors, errorDeltas, trainAccuracies,
+  timeSeriesTypes = [errors, errorDeltas, trainAccuracies,
       validationAccuracies, testAccuracies];
+  currentTimeSeries = 0;
   drawDist(timeSeriesTypes[0]);
   //drawDist(timeSeriesTypes[1]);
 
@@ -918,4 +939,13 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
           .attr("x", xLabelX)
           .attr("y", xLabelY)
           .style("visibility", "visible");
+}
+var webSocket = new WebSocket("ws://localhost:9999");
+webSocket.onmessage = function (event) {
+  //console.log(JSON.parse(event.data));
+  updateVisualization(JSON.parse(event.data));
+}
+webSocket.onopen = function () {
+  console.log("opened");
+  webSocket.send("test");
 }

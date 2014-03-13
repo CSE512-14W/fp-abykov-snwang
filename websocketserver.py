@@ -7,6 +7,7 @@ from StringIO import StringIO
 import svmrunner
 import json
 import sys
+import time
 
 class WebSocketsHandler(SocketServer.ThreadingMixIn, SocketServer.StreamRequestHandler):
     magic = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
@@ -65,6 +66,7 @@ class WebSocketsHandler(SocketServer.ThreadingMixIn, SocketServer.StreamRequestH
     def on_message(self, message):
         for items in svmrunner.iterations():
             self.send_message(json.dumps(items))
+            time.sleep(0.1)
 
 if __name__ == "__main__":
     if len(sys.argv) > 2:

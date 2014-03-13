@@ -896,4 +896,17 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
               yAxisSelected = false;
             }
           });
+
+    var xLabel = bottom.append("g");
+    xLabel.append("text")
+          .text("Iterations")
+          .attr("class", "label")
+          .style("visibility", "hidden");
+    var xLabelWidth = xLabel.select("text").node().getComputedTextLength();
+    var xLabelX = labelPadding + axesPadding + (plotWidth - xLabelWidth) / 2;
+    var xLabelY = bottomPlotHeight + axesPadding;
+    xLabel.select("text")
+          .attr("x", xLabelX)
+          .attr("y", xLabelY)
+          .style("visibility", "visible");
 }

@@ -14,7 +14,7 @@ var fullChart = d3.select("body")
 var title = fullChart.append("g")
               .attr("transform", "translate(" + margin.left + "," + margin.top / 3 + ")")
 title.append("text")
-     .text("Visualizing an SVM algorithm")
+     .text("Visualizing an SVM classifier")
      .style("font-family", "Arial Black")
      .style("font-size", "18px")
      .style("visibility", "hidden");

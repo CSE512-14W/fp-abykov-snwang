@@ -253,8 +253,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   var currentXDim = sortW[0].index;
   var currentYDim = sortW[1].index;*/
   
-  var currentXDim = 12;
-  var currentYDim = 1;
+  var currentFeatureDim = [0, 1, 2];
   var numPlots = 3;
   var correctPointRadius = 2;
   var mistakePointRadius = 4;
@@ -280,12 +279,18 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   // reverse the color of correct and incorrect for each class
   colorScale.range(["#998F3D", "#ff7f0e", "#14B1CC", "#1f77b4", "#4D9E62"])
   
-  var plotData = function(replot, xi, yi, xdim, ydim, plotWidth, plotHeight) {
+  var plotData = function(replot, dodelete, xi, yi, plotWidth, plotHeight) {
+    var xdim = currentFeatureDim[xi];
+    var ydim = currentFeatureDim[numPlots - yi - 1];
+  
     // Clear out anything plotted previously if we are fully replotting
     var plotWidthPadding = 20;
     var plotHeightPadding = 10;
+    if (dodelete) {
+      plotGroupParent.selectAll("g").remove();
+    }
+    
     if (replot) {
-      //plotGroupParent.selectAll("g").remove();
       plotGroup = plotGroupParent.append("g");
       var plotArea = plotGroup.append("rect")
              .attr("x", axesPadding + labelPadding + xi * plotWidth)
@@ -546,7 +551,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
         var ylabel = plotGroup.append("g");
         var yLabelRect = ylabel.append("rect");
         ylabel.append("text")
-              .data([yi])
+              .data([numPlots - yi - 1])
               .text(fitText(featureNames[ydim][0], plotHeight - plotHeightPadding))
               .attr("class", "label")
               .style("visibility", "hidden");
@@ -597,12 +602,16 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
     }
   }
   
-  // Plot the weight vector
-  for (var i = 0; i < numPlots; i++) {
-    for (var j = 0; j < numPlots; j++) {
-      plotData(true, i, j, i, numPlots - j - 1, fullPlotWidth / numPlots, fullPlotHeight / numPlots);
+  function plotAllData(redraw) {  
+    // Plot the weight vector
+    for (var i = 0; i < numPlots; i++) {
+      for (var j = 0; j < numPlots; j++) {
+        plotData(redraw, (i == 0) && (j == 0) ? true : false, i, j, fullPlotWidth / numPlots, fullPlotHeight / numPlots);
+      }
     }
   }
+  
+  plotAllData(true);
   
   // Add a legend to the bottom right
   var legendPadding = 12;
@@ -713,13 +722,10 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                   .on("click", function(d, i) {
                       featureSelectorGroup.style("visibility", "hidden");
                       // Redraw with the given feature
-                      if (selectedAxis == 0) {
-                        currentXDim = i;
-                      } else {
-                        currentYDim = i;
-                      }
+                      currentFeatureDim[selectedFeatureIndex] = i;
                       selectedAxis = -1;
-                      plotData(true, fullPlotWidth / 4, fullPlotHeight / 4);
+                      selectedFeatureIndex = -1;
+                      plotAllData(true);
                     });
 
   /** Slider bar and distribution chart **/
@@ -882,7 +888,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
       
       // Replot the data
       currentIndex = Math.floor(index);
-      plotData(false, fullPlotWidth / 4, fullPlotHeight / 4);
+      plotAllData(false);
     }
   }
 
@@ -945,7 +951,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                       yLabelRect
                         .attr("y", newYLabelY - newYLabelWidth - 2 * rectLabelPadding)
                         .attr("height", newYLabelWidth + 4 * rectLabelPadding);
-                      plotData(true, fullPlotWidth / 4, fullPlotHeight / 4);
+                      plotAllData(true);
                       drawDist(timeSeriesTypes[i]);
                     });
 

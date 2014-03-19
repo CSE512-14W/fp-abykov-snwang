@@ -293,7 +293,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
     
     if (replot) {
       plotGroup = plotGroupParent.append("g");
-      plotsArray[xi + yi * numPlots] = plotGroup;
+      plotGroup.attr("id", "" + (xi + yi * numPlots));
       var plotArea = plotGroup.append("rect")
              .attr("x", axesPadding + labelPadding + xi * plotWidth)
              .attr("y", yi * plotHeight)
@@ -302,7 +302,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
              .attr("fill", "#eee")
              .attr("opacity", 0.5);
     } else {
-      plotGroup = plotsArray[xi + yi * numPlots];
+      plotGroup = plotGroupParent.select("g#" + (xi + yi * numPlots));
     }
 
     // Get all of the current variables

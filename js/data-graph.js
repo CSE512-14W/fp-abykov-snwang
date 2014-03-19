@@ -255,6 +255,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   
   var currentFeatureDim = [0, 1, 2];
   var numPlots = 3;
+  var plotsArray = new Array(numPlots * numPlots);
   var correctPointRadius = 2;
   var mistakePointRadius = 4;
   
@@ -292,6 +293,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
     
     if (replot) {
       plotGroup = plotGroupParent.append("g");
+      plotsArray[xi + yi * numPlots] = plotGroup;
       var plotArea = plotGroup.append("rect")
              .attr("x", axesPadding + labelPadding + xi * plotWidth)
              .attr("y", yi * plotHeight)
@@ -299,6 +301,8 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
              .attr("height", plotHeight - plotHeightPadding)
              .attr("fill", "#eee")
              .attr("opacity", 0.5);
+    } else {
+      plotGroup = plotsArray[xi + yi * numPlots];
     }
 
     // Get all of the current variables
@@ -606,7 +610,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
     // Plot the weight vector
     for (var i = 0; i < numPlots; i++) {
       for (var j = 0; j < numPlots; j++) {
-        plotData(redraw, (i == 0) && (j == 0) ? true : false, i, j, fullPlotWidth / numPlots, fullPlotHeight / numPlots);
+        plotData(redraw, (i == 0) && (j == 0) && redraw ? true : false, i, j, fullPlotWidth / numPlots, fullPlotHeight / numPlots);
       }
     }
   }

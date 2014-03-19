@@ -253,8 +253,11 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   var currentXDim = sortW[0].index;
   var currentYDim = sortW[1].index;*/
   
-  var currentFeatureDim = [0, 1, 2];
   var numPlots = 3;
+  var currentFeatureDim = new Array(numPlots);
+  for (var i = 0; i < numPlots; i++) {
+    currentFeatureDim[i] = i;
+  }
   var xScaleArray = new Array(numPlots * numPlots);
   var yScaleArray = new Array(numPlots * numPlots);
   var correctPointRadius = 2;

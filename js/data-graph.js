@@ -224,6 +224,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   var textHeight = 12;
   var rectLabelPadding = 2;
   var selectedAxis = -1;
+  var selectedFeatureIndex = -1;
   var currentIndex = 0;
   var currentTimeSeries = 0;
   var tsDatasets = [parsedTrainData, parsedTrainData, parsedTrainData, parsedValidationData, parsedTestData];
@@ -489,6 +490,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
         var xlabel = plotGroup.append("g");
         var xLabelRect = xlabel.append("rect");
         xlabel.append("text")
+              .data([xi])
               .text(fitText(featureNames[xdim][0], plotWidth - plotWidthPadding))
               .attr("class", "label")
               .style("visibility", "hidden");
@@ -514,17 +516,28 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
               .on("mouseout", function() {
                   xLabelRect.attr("fill", "#eee");
                 })
-              .on("click", function () {
-                  if (selectedAxis != 0) {
-                    var featureSelectorX = margin.left + labelPadding + axesPadding + (plotWidth - (longestFeatureWidth + 10 * rectLabelPadding)) / 2;
-                    var featureSelectorY = margin.top + labelPadding + plotHeight - textHeight * maxFeaturesInList;
+              .on("click", function (d) {
+                  if (selectedAxis != 0 || selectedFeatureIndex != d) {
+                    var featureSelectorX = margin.left + labelPadding + axesPadding + xi * plotWidth + (plotWidth - (longestFeatureWidth + 10 * rectLabelPadding)) / 2;
+                    var featureSelectorY = margin.top + labelPadding + fullPlotHeight - textHeight * maxFeaturesInList;
+                    
+                    if (featureSelectorX < margin.left + labelPadding + axesPadding) {
+                      featureSelectorX = margin.left + labelPadding + axesPadding;
+                    }
+                    
+                    if (featureSelectorX > margin.left + labelPadding + axesPadding + fullPlotWidth - longestFeatureWidth) {
+                      featureSelectorX = margin.left + labelPadding + axesPadding + fullPlotWidth - longestFeatureWidth;
+                    }
+                    
                     featureSelectorGroup.style("left", featureSelectorX + "px")
                                         .style("top", featureSelectorY + "px")
                                         .style("visibility", "visible");
                     selectedAxis = 0;
+                    selectedFeatureIndex = d;
                   } else {
                     featureSelectorGroup.style("visibility", "hidden");
                     selectedAxis = -1;
+                    selectedFeatureIndex = -1;
                   }
                 });
       }
@@ -533,6 +546,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
         var ylabel = plotGroup.append("g");
         var yLabelRect = ylabel.append("rect");
         ylabel.append("text")
+              .data([yi])
               .text(fitText(featureNames[ydim][0], plotHeight - plotHeightPadding))
               .attr("class", "label")
               .style("visibility", "hidden");
@@ -555,17 +569,28 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
               .on('mouseout', function() {
                   yLabelRect.attr("fill", "#eee");
                 })
-              .on("click", function () {
-                  if (selectedAxis != 1) {
+              .on("click", function (d) {
+                  if (selectedAxis != 1 || selectedFeatureIndex != d) {
                     var featureSelectorX = labelPadding + axesPadding + margin.left;
-                    var featureSelectorY = margin.top + (plotHeight - textHeight * maxFeaturesInList) / 2;
+                    var featureSelectorY = margin.top + yi * plotHeight + (plotHeight - textHeight * maxFeaturesInList) / 2;
+                    
+                    if (featureSelectorY < margin.top) {
+                      featureSelectorY = margin.top;
+                    }
+                    
+                    if (featureSelectorY > margin.top + fullPlotHeight - textHeight * maxFeaturesInList) {
+                      featureSelectorY = margin.top + fullPlotHeight - textHeight * maxFeaturesInList;
+                    }
+                    
                     featureSelectorGroup.style("left", featureSelectorX + "px")
                                         .style("top", featureSelectorY + "px")
                                         .style("visibility", "visible");
                     selectedAxis = 1;
+                    selectedFeatureIndex = d;
                   } else {
                     featureSelectorGroup.style("visibility", "hidden");
                     selectedAxis = -1;
+                    selectedFeatureIndex = -1;
                   }
                 });
       }

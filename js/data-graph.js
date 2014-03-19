@@ -255,7 +255,8 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   
   var currentFeatureDim = [0, 1, 2];
   var numPlots = 3;
-  var plotsArray = new Array(numPlots * numPlots);
+  var xScaleArray = new Array(numPlots * numPlots);
+  var yScaleArray = new Array(numPlots * numPlots);
   var correctPointRadius = 2;
   var mistakePointRadius = 4;
   
@@ -283,7 +284,8 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   var plotData = function(replot, dodelete, xi, yi, plotWidth, plotHeight) {
     var xdim = currentFeatureDim[xi];
     var ydim = currentFeatureDim[numPlots - yi - 1];
-  
+    var curPlotIndex = xi + yi * numPlots;  
+
     // Clear out anything plotted previously if we are fully replotting
     var plotWidthPadding = 20;
     var plotHeightPadding = 10;
@@ -293,7 +295,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
     
     if (replot) {
       plotGroup = plotGroupParent.append("g");
-      plotGroup.attr("id", "" + (xi + yi * numPlots));
+      plotGroup.attr("id", "plot" + curPlotIndex);
       var plotArea = plotGroup.append("rect")
              .attr("x", axesPadding + labelPadding + xi * plotWidth)
              .attr("y", yi * plotHeight)
@@ -302,7 +304,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
              .attr("fill", "#eee")
              .attr("opacity", 0.5);
     } else {
-      plotGroup = plotGroupParent.select("g#" + (xi + yi * numPlots));
+      plotGroup = plotGroupParent.select("#plot" + curPlotIndex);
     }
 
     // Get all of the current variables
@@ -372,6 +374,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                      .domain([minX, maxX])
                      .nice()
                      .range([axesPadding + labelPadding + xi * plotWidth, axesPadding + labelPadding + (xi + 1) * plotWidth - plotWidthPadding]);
+      xScaleArray[curPlotIndex] = xScale;
       var xAxis = d3.svg.axis()
                         .scale(xScale);
       var xTicks = xScale.ticks(10);
@@ -379,6 +382,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                      .domain([minY, maxY])
                      .nice()
                      .range([(yi + 1) * plotHeight - plotHeightPadding, yi * plotHeight]);
+      yScaleArray[curPlotIndex] = yScale;
       var yAxis = d3.svg.axis()
                         .scale(yScale)
                         .orient("left");
@@ -426,7 +430,14 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                 .attr("class", "gridline");
       
       correctPointsGroup = plotGroup.append("g");
+      correctPointsGroup.attr("id", "correctPoints");
       mistakePointsGroup = plotGroup.append("g");
+      mistakePointsGroup.attr("id", "mistakePoints");
+    } else {
+      xScale = xScaleArray[curPlotIndex];
+      yScale = yScaleArray[curPlotIndex];
+      correctPointsGroup = plotGroup.select("#correctPoints");
+      mistakePointsGroup = plotGroup.select("#mistakePoints");
     }
     
     // Plot all of the points             

@@ -818,7 +818,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
     var xAxisYValue = bottomPlotHeight;
     var yAxisMinValue = 0;
     var yAxisMaxValue = maxValue;
-    var useArea = true;
+    var useArea = false;
     var colorType = "incorrect";
 
     x.domain([0, data.length]);

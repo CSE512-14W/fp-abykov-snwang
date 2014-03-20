@@ -39,16 +39,16 @@ var dataPaddingPercentage = 0.02;
                     
 // Load in all of the data
 queue()
-  .defer(d3.text, "data/biodeg-train.csv")
-  .defer(d3.text, "data/biodeg-validation.csv")
-  .defer(d3.text, "data/biodeg-test.csv")
-  .defer(d3.text, "data/biodeg-features.txt")
+  .defer(d3.text, "data/haberman-train.csv")
+  .defer(d3.text, "data/haberman-validation.csv")
+  .defer(d3.text, "data/haberman-test.csv")
+  .defer(d3.text, "data/haberman-features.txt")
   .defer(d3.text, "data/biodeg-w.csv")
   .defer(d3.text, "data/biodeg-errors.csv")
   .defer(d3.text, "data/biodeg-train-accuracies.csv")
   .defer(d3.text, "data/biodeg-validation-accuracies.csv")
   .defer(d3.text, "data/biodeg-test-accuracies.csv")
-  .defer(d3.text, "data/biodeg-classes.txt")
+  .defer(d3.text, "data/haberman-classes.txt")
   .await(drawElements);
   
 
@@ -342,7 +342,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
       var y = data[i][ydim];
       
       // Also keep track of each class we encounter. This will be the last token of each line
-      var lineClass = data[i][numDim];
+      var lineClass = classes[parseInt(data[i][numDim]) - 1];
       
       // Calculate the predicted class given the w vector
       var predSum = w[0];
@@ -709,7 +709,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
            .attr("stroke", colorScale("class-2-correct"));
   
   // Create a list of all the features to use for selecting the axes
-  var maxFeaturesInList = 20;
+  var maxFeaturesInList = 20 > numDim ? numDim + 1 : 20;
   var featureSelectorGroup = d3.select("body").append("div")
                                               .style("left", "0px")
                                               .style("top", "0px")
@@ -1027,7 +1027,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
 }
 var webSocket = new WebSocket("ws://localhost:9999");
 webSocket.onmessage = function (event) {
-  //console.log(JSON.parse(event.data));
+  console.log(JSON.parse(event.data));
   updateVisualization(JSON.parse(event.data));
 }
 webSocket.onopen = function () {

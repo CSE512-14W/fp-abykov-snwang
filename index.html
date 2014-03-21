@@ -20,41 +20,35 @@
 
     <div class='pub' data-spy="scroll" data-target=".navbar">
 
-      <h1 class="title">Final Project Template</h1>
-      <div class="authors">
-        <a href="http://jheer.org">Jeffrey Heer</a>,
-        <a href="http://kanitw.yellowpigz.com">Kanit Wongsuphasawat</a>
+      <h1 class="title">Interactive Visualizations for Supervised Learning</h1>
+      <div class="authors">Alexandre Bykov, Stanley Wang
       </div>
 
       <div class="figure">
         <img src="summary.png" width="100%"/>
-        <div class="caption">William Playfairâ€™s classic chart comparing the price of wheat and wages in England recreated in the Lyra VDE.</div>
+        <div class="caption">The main screen, showing the scatterplot matrix for the last iteration and the number of errors per iteration on the lower chart. The prominent orange and blue marks are classification errors.</div>
       </div>
 
       <p>
-        Acknowledgement: Example abstract, image and videos are from <a href="http://idl.cs.washington.edu/projects/lyra">Lyra</a>. <br/><br/>
-        Lyra is an interactive environment that enables custom visualization design without writing any code. Graphical â€œmarksâ€ can be bound to data fields using property drop zones; dynamically positioned using connectors; and directly moved, rotated, and resized using handles. Lyra also provides a data pipeline interface for iterative visual specification of data transformations and layout algorithms. Lyra is more expressive than interactive systems like Tableau, allowing designers to create custom visualizations comparable to hand-coded visualizations built with D3 or Processing. These visualizations can then be easily published and reused on the Web.
+      	In this project we create a visualization tool for analyzing machine learning classification algorithms. The key idea behind this tool is to provide the user with per-iteration performance information for the algorithm. This is done through two main views. The first view contains a scatterplot matrix of the data projected into multiple dimension pairs. Each point is labeled with its actual and predicted labels to highlight where in the dataset errors occur at each dimension. The second view provides summary statistics (classification accuracy, number of errors, etc.) at each iteration and an interface to scroll through every iteration of the algorithm. Both of these views are updated in real-time as the algorithm as running. As a test of the system, the provided implementation visualizes running a linear SVM algorithm on a breast cancer survival dataset with about 200 points and 3 dimensions. The implementation is easily extendable  to other algorithms and datasets.
       </p>
       
       <h2>Software</h2>
       <p>
-        Try it online <a href="http://idl.cs.washington.edu/projects/lyra/app/">here</a>. 
-        (Put detailed running instructions here if you don't have an online version available.  
-        If your software requires some learning before using, you might want to put a short tutorial here.
+      	Since the visualization depends on Python's scikit-learn SVM implementation it must be run locally on a machine with the latest version of scikit-learn (download <a href="http://scikit-learn.org/stable/install.html">here</a>).
+        <br/><br/>To run, download the full repository and follow the following steps:
+        <br/>1) Run <code>python -m SimpleHTTPServer</code>
+        <br/>2) Run <code>python websocketserver.py</code> from the root directory of the visualization.
+        <br/>3) Access <a href="http://localhost:8000/mlviz.html">http://localhost:8000/mlviz.html</a> to view the visualization.
+        <br/><br/>Note: If the visualization does not start immediately, pressing ctrl-c in the webserver window should fix that.
       </p>
 
       <h2>Materials</h2>
       <div class="links">
-        <a href="final/paper-jheer-kanitw.pdf" >PDF</a>
+        <a href="final/paper-abykov-snwang.pdf" >PDF</a>
         |
-        <a href="final/poster-jheer-kanitw.pdf" >Poster</a>
+        <a href="final/poster-abykov-snwang.pdf" >Poster</a>
       </div>
-
-      <h2>Videos</h2>
-      <video width="700" height="385" controls="">
-        <source src="http://idl.cs.washington.edu/static/images/projects/lyra/Playfair-New.mp4" type="video/mp4">
-        Your browser does not support the video tag.
-      </video>
 
 
       <div class='footer'>

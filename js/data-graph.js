@@ -39,18 +39,19 @@ var dataPaddingPercentage = 0.02;
                     
 // Load in all of the data
 queue()
-  .defer(d3.text, "data/biodeg-train.csv")
-  .defer(d3.text, "data/biodeg-validation.csv")
-  .defer(d3.text, "data/biodeg-test.csv")
-  .defer(d3.text, "data/biodeg-features.txt")
+  .defer(d3.text, "data/haberman-train.csv")
+  .defer(d3.text, "data/haberman-validation.csv")
+  .defer(d3.text, "data/haberman-test.csv")
+  .defer(d3.text, "data/haberman-features.txt")
   .defer(d3.text, "data/biodeg-w.csv")
   .defer(d3.text, "data/biodeg-errors.csv")
   .defer(d3.text, "data/biodeg-train-accuracies.csv")
   .defer(d3.text, "data/biodeg-validation-accuracies.csv")
   .defer(d3.text, "data/biodeg-test-accuracies.csv")
-  .defer(d3.text, "data/biodeg-classes.txt")
+  .defer(d3.text, "data/haberman-classes.txt")
   .await(drawElements);
   
+
 function calculateDatasetProperties(data, numDim) {
   // To make life easier for us later we can compute the min, max, mean and std of each dimension here
   var featureMins = new Array(numDim);
@@ -101,13 +102,35 @@ function calculateDatasetProperties(data, numDim) {
   var dataMeasures = {mins:featureMins, maxs:featureMaxs, means:featureMeans, stds:featureStds};
   return dataMeasures;
 }
+ 
+function fitText(text, maxWidth) {
+  var textLabel = plot.append("g");
+  textLabel.append("text")
+           .text(text)
+           .attr("class", "label")
+           .style("visibility", "hidden");
+  var textWidth = textLabel.select("text").node().getComputedTextLength();
   
+  var addEllipses = false;
+  
+  while (textWidth > maxWidth) {
+    addEllipses = true;
+    text = text.slice(0, text.length - 1);
+    textLabel.select("text")
+             .text(text + "...");
+    textWidth = textLabel.select("text").node().getComputedTextLength();
+  }
+  
+  return addEllipses ? text + "..." : text;
+}
+ 
 function drawCross(x, y, radius) {
   return "M " + (x - radius) + " " + (y + radius) 
       + " L " + (x + radius) + " " + (y - radius)
       + " M " + (x - radius) + " " + (y - radius) 
       + " L " + (x + radius) + " " + (y + radius);
 }
+var updateVisualization = function () {};
   
 function drawElements(err, unparsedTrainData, unparsedValidationData, 
     unparsedTestData, unparsedFeatureNames, unparsedWeightVectors, 
@@ -119,26 +142,51 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   var parsedTestData = d3.csv.parseRows(unparsedTestData);
   
   var featureNames = d3.csv.parseRows(unparsedFeatureNames);
-  var errors = d3.csv.parseRows(unparsedErrors).map(function (x) {
-    return Math.round(parseFloat(x[0]));
-  });
-  var trainAccuracies = d3.csv.parseRows(unparsedTrainAccuracies).map(function (x) {
-    return parseFloat(x[0]);
-  });
-  var validationAccuracies = d3.csv.parseRows(unparsedValidationAccuracies).map(function (x) {
-    return parseFloat(x[0]);
-  });
-  var testAccuracies = d3.csv.parseRows(unparsedTestAccuracies).map(function (x) {
-    return parseFloat(x[0]);
-  });
-  var weightVectors = d3.csv.parseRows(unparsedWeightVectors);
+  //var errors = d3.csv.parseRows(unparsedErrors).map(function (x) {
+    //return Math.round(parseFloat(x[0]));
+  //});
+  //var trainAccuracies = d3.csv.parseRows(unparsedTrainAccuracies).map(function (x) {
+    //return parseFloat(x[0]);
+  //});
+  //var validationAccuracies = d3.csv.parseRows(unparsedValidationAccuracies).map(function (x) {
+    //return parseFloat(x[0]);
+  //});
+  //var testAccuracies = d3.csv.parseRows(unparsedTestAccuracies).map(function (x) {
+    //return parseFloat(x[0]);
+  //});
+  //var weightVectors = d3.csv.parseRows(unparsedWeightVectors);
   var classes = d3.csv.parseRows(unparsedClassNames);
 
-  var errorDeltas = new Array(errors.length);
-  errorDeltas[0] = 0;
-  for (var i = 1; i < errors.length; i++) {
-    errorDeltas[i] = errors[i] - errors[i-1];
-  }
+  //var errorDeltas = new Array(errors.length);
+  //errorDeltas[0] = 0;
+  //for (var i = 1; i < errors.length; i++) {
+    //errorDeltas[i] = errors[i] - errors[i-1];
+  //}
+  trainAccuracies = [0.5];
+  validationAccuracies = [0.5];
+  testAccuracies = [0.5];
+  weightVectors = [[]];
+  for (var i = 0; i < parsedTrainData.length; i++)
+    weightVectors[0][i] = Math.random()*2 - 1;
+  //weightVectors = weightVectors[0];
+  errors = [0.5 * parsedTrainData.length];
+  errorDeltas = [0];
+
+  updateVisualization = function (iterationData) {
+    var i = iterationData[0],
+        w = iterationData[1],
+        numErrors = iterationData[2],
+        trainAccuracy = iterationData[3],
+        validationAccuracy = iterationData[4],
+        testAccuracy = iterationData[5];
+    weightVectors.push(w);
+    errorDeltas.push(numErrors - errors[errors.length - 1]);
+    errors.push(numErrors);
+    trainAccuracies.push(trainAccuracy);
+    validationAccuracies.push(validationAccuracy);
+    testAccuracies.push(testAccuracy);
+    drawDist(timeSeriesTypes[currentTimeSeries]);
+  };
   
   var numDim = parsedTrainData[0].length - 1;
   var trainDataMeasures = calculateDatasetProperties(parsedTrainData, numDim);
@@ -161,14 +209,8 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   }
    
   // Plot the rectangle behind the actual plot
-  var plotWidth = width - axesPadding - labelPadding;
-  var plotHeight = topHeight - axesPadding - labelPadding;
-  var plotArea = plot.append("rect")
-                     .attr("x", axesPadding + labelPadding)
-                     .attr("width", plotWidth)
-                     .attr("height", plotHeight)
-                     .attr("fill", "#eee")
-                     .attr("opacity", 0.5);
+  var fullPlotWidth = width - axesPadding - labelPadding;
+  var fullPlotHeight = topHeight - axesPadding - labelPadding;
   
   // Create a new group for plotting the points, axes, etc.
   var plotGroupParent = plot.append("g");
@@ -182,13 +224,14 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   var textHeight = 12;
   var rectLabelPadding = 2;
   var selectedAxis = -1;
+  var selectedFeatureIndex = -1;
   var currentIndex = 0;
   var currentTimeSeries = 0;
   var tsDatasets = [parsedTrainData, parsedTrainData, parsedTrainData, parsedValidationData, parsedTestData];
   var tsDataMeasures = [trainDataMeasures, trainDataMeasures, trainDataMeasures, validationDataMeasures, testDataMeasures];
   
   // Start with the dimensions of highest weight
-  var numW = weightVectors.length;
+  /*var numW = weightVectors.length;
   var lastW = weightVectors[numW - 1].map(function (x) {
       return parseFloat(x);
     });
@@ -208,7 +251,17 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   var sortW = sortW.sort(compareW);
   
   var currentXDim = sortW[0].index;
-  var currentYDim = sortW[1].index;
+  var currentYDim = sortW[1].index;*/
+  
+  var numPlots = 3;
+  var currentFeatureDim = new Array(numPlots);
+  for (var i = 0; i < numPlots; i++) {
+    currentFeatureDim[i] = i;
+  }
+  var xScaleArray = new Array(numPlots * numPlots);
+  var yScaleArray = new Array(numPlots * numPlots);
+  var correctPointRadius = 2;
+  var mistakePointRadius = 4;
   
   // tooltip for point descriptions
   var tip = d3.tip()
@@ -223,20 +276,43 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
               });
               
   // Add a color scale for the classes
-  var colorScale = d3.scale.category10().domain(["correct", "incorrect"]);
+  var colorScale = d3.scale.ordinal().domain(
+      ["class-1-correct", "class-1-incorrect", "class-2-correct", "class-2-incorrect", "black"]
+  );
+  //colorScale.range(["#ff7f0e", "#998F3D", "#1f77b4", "#14B1CC", "#262626"])
+
+  // reverse the color of correct and incorrect for each class
+  colorScale.range(["#998F3D", "#ff7f0e", "#14B1CC", "#1f77b4", "#4D9E62"])
   
-  var plotData = function(replot) {
+  var plotData = function(replot, dodelete, xi, yi, plotWidth, plotHeight) {
+    var xdim = currentFeatureDim[xi];
+    var ydim = currentFeatureDim[numPlots - yi - 1];
+    var curPlotIndex = xi + yi * numPlots;  
+
     // Clear out anything plotted previously if we are fully replotting
-    if (replot) {
+    var plotWidthPadding = 20;
+    var plotHeightPadding = 10;
+    if (dodelete) {
       plotGroupParent.selectAll("g").remove();
+    }
+    
+    if (replot) {
       plotGroup = plotGroupParent.append("g");
+      plotGroup.attr("id", "plot" + curPlotIndex);
+      var plotArea = plotGroup.append("rect")
+             .attr("x", axesPadding + labelPadding + xi * plotWidth)
+             .attr("y", yi * plotHeight)
+             .attr("width", plotWidth - plotWidthPadding)
+             .attr("height", plotHeight - plotHeightPadding)
+             .attr("fill", "#eee")
+             .attr("opacity", 0.5);
+    } else {
+      plotGroup = plotGroupParent.select("#plot" + curPlotIndex);
     }
 
     // Get all of the current variables
     var data = tsDatasets[currentTimeSeries];
     var dataMeasures = tsDataMeasures[currentTimeSeries];
-    var xdim = currentXDim;
-    var ydim = currentYDim;
     var w = weightVectors[currentIndex];
     
     // Setup the tooltip
@@ -266,7 +342,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
       var y = data[i][ydim];
       
       // Also keep track of each class we encounter. This will be the last token of each line
-      var lineClass = data[i][numDim];
+      var lineClass = classes[parseInt(data[i][numDim]) - 1];
       
       // Calculate the predicted class given the w vector
       var predSum = w[0];
@@ -300,14 +376,16 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
       xScale = d3.scale.linear()
                      .domain([minX, maxX])
                      .nice()
-                     .range([axesPadding + labelPadding, width]);
+                     .range([axesPadding + labelPadding + xi * plotWidth, axesPadding + labelPadding + (xi + 1) * plotWidth - plotWidthPadding]);
+      xScaleArray[curPlotIndex] = xScale;
       var xAxis = d3.svg.axis()
                         .scale(xScale);
       var xTicks = xScale.ticks(10);
       yScale = d3.scale.linear()
                      .domain([minY, maxY])
                      .nice()
-                     .range([plotHeight, 0]);
+                     .range([(yi + 1) * plotHeight - plotHeightPadding, yi * plotHeight]);
+      yScaleArray[curPlotIndex] = yScale;
       var yAxis = d3.svg.axis()
                         .scale(yScale)
                         .orient("left");
@@ -320,14 +398,18 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
       maxY = yScale.domain()[1];
       
       // Plot the axes
-      plotGroup.append("g")
-          .attr("class", "axis")
-          .attr("transform", "translate(0, " + plotHeight + ")")
-          .call(xAxis);
-      plotGroup.append("g")
-          .attr("class", "axis")
-          .attr("transform", "translate(" + (axesPadding + labelPadding) + ", 0)")
-          .call(yAxis);
+      if (yi + 1 == numPlots) {
+        plotGroup.append("g")
+            .attr("class", "axis")
+            .attr("transform", "translate(0, " + (numPlots * plotHeight - plotHeightPadding) + ")")
+            .call(xAxis);
+      }
+      if (xi == 0) {
+        plotGroup.append("g")
+            .attr("class", "axis")
+            .attr("transform", "translate(" + (axesPadding + labelPadding) + ", 0)")
+            .call(yAxis);
+      }
           
       // Plot the gridlines
       var xGridlines = plotGroup.selectAll("vline")
@@ -351,42 +433,42 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                 .attr("class", "gridline");
       
       correctPointsGroup = plotGroup.append("g");
+      correctPointsGroup.attr("id", "correctPoints");
       mistakePointsGroup = plotGroup.append("g");
+      mistakePointsGroup.attr("id", "mistakePoints");
+    } else {
+      xScale = xScaleArray[curPlotIndex];
+      yScale = yScaleArray[curPlotIndex];
+      correctPointsGroup = plotGroup.select("#correctPoints");
+      mistakePointsGroup = plotGroup.select("#mistakePoints");
     }
     
-    // Plot all of the points
-    correctPointsGroup.selectAll("circle")
-                      //.data(plotCorrectData)
-                      //.exit()
-                      .remove();
-                                          
+    // Plot all of the points             
     var correctPoints = correctPointsGroup.selectAll("circle")
-                                          .data(plotCorrectData)
-                                          .enter()
-                                          .append("circle");
+                                          .data(plotCorrectData);
+                                          
+    correctPoints.enter()
+                 .append("circle");
                      
     // Assign all of the point attributes
-    var correctPointRadius = 2;
-    var mistakePointRadius = 4;
-    
     correctPoints.attr("cx", function (d) { return xScale(d.x); })
                  .attr("cy", function (d) { return yScale(d.y); })
                  .attr("r", correctPointRadius)
                  .attr("fill-opacity", 0)
                  .attr("stroke", function (d) { 
                       if (d.dclass == classes[0])
-                        return colorScale("correct");
+                        return colorScale("class-1-correct");
                       else
-                        return colorScale("incorrect");
+                        return colorScale("class-2-correct");
                     });
     
-    mistakePointsGroup.selectAll("path")
-                      .remove();
+    correctPoints.exit().remove();
                                           
     var mistakePaths = mistakePointsGroup.selectAll("path")
-                                         .data(plotMistakeData)
-                                         .enter()
-                                         .append("path");
+                                         .data(plotMistakeData);
+                                         
+    mistakePaths.enter()
+                .append("path");
                      
     // Assign all of the point attributes
     mistakePaths.attr("d", function (d) {
@@ -397,19 +479,19 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                 .attr("stroke-width", 2)
                 .attr("stroke", function (d) { 
                     if (d.dclass == classes[0])
-                      return colorScale("correct");
+                      return colorScale("class-1-incorrect");
                     else
-                      return colorScale("incorrect");
+                      return colorScale("class-2-incorrect");
                   });
     
-    // Creates circles behind the paths for better tooltip response
-    mistakePointsGroup.selectAll("circle")
-                      .remove();
-                                          
+    mistakePaths.exit().remove();
+    
+    // Creates circles behind the paths for better tooltip response                                          
     var mistakePoints = mistakePointsGroup.selectAll("circle")
-                                          .data(plotMistakeData)
-                                          .enter()
-                                          .append("circle");
+                                          .data(plotMistakeData);
+                                          
+    mistakePoints.enter()
+                 .append("circle");
                      
     // Assign all of the point attributes
     mistakePoints.attr("cx", function (d) { return xScale(d.x); })
@@ -423,171 +505,211 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                       tip.hide();
                     });
     
+    mistakePoints.exit().remove();
+    
     if (replot) {
-      // Add labels with rectangles to the axes    
-      var xlabel = plotGroup.append("g");
-      var xLabelRect = xlabel.append("rect");
-      xlabel.append("text")
-            .text(featureNames[xdim][0])
-            .attr("class", "label")
-            .style("visibility", "hidden");
-      var xLabelWidth = xlabel.select("text").node().getComputedTextLength();
-      var xLabelX = labelPadding + axesPadding + (plotWidth - xLabelWidth) / 2;
-      var xLabelY = plotHeight + axesPadding;
-      xLabelRect.attr("x", xLabelX - 2 * rectLabelPadding)
-                .attr("y", xLabelY - textHeight)
-                .attr("width", xLabelWidth + 4 * rectLabelPadding)
-                .attr("height", textHeight + 2 * rectLabelPadding)
-                .attr("fill", "#eee")
-                .attr("fill-opacity", 0.5);
-      xlabel.select("text")
-            .attr("x", xLabelX)
-            .attr("y", xLabelY)
-            .style("cursor", "pointer")
-            .style("visibility", "visible")
-            .on("mouseover", function() {
-                // On mouse over we want to display a darker rectangle behind the label
-                xLabelRect.attr("fill", "#ddd");
-              })
-            .on("mouseout", function() {
-                xLabelRect.attr("fill", "#eee");
-              })
-            .on("click", function () {
-                if (selectedAxis != 0) {
-                  var featureSelectorX = margin.left + labelPadding + axesPadding + (plotWidth - (longestFeatureWidth + 10 * rectLabelPadding)) / 2;
-                  var featureSelectorY = margin.top + labelPadding + plotHeight - textHeight * maxFeaturesInList;
-                  featureSelectorGroup.style("left", featureSelectorX + "px")
-                                      .style("top", featureSelectorY + "px")
-                                      .style("visibility", "visible");
-                  selectedAxis = 0;
-                } else {
-                  featureSelectorGroup.style("visibility", "hidden");
-                  selectedAxis = -1;
-                }
-              });
-              
-      var ylabel = plotGroup.append("g");
-      var yLabelRect = ylabel.append("rect");
-      ylabel.append("text")
-            .text(featureNames[ydim][0])
-            .attr("class", "label")
-            .style("visibility", "hidden");
-      var yLabelWidth = ylabel.select("text").node().getComputedTextLength();
-      var yLabelY = (plotHeight + yLabelWidth) / 2;
-      yLabelRect.attr("x", -5)
-                .attr("y", yLabelY - yLabelWidth - 2 * rectLabelPadding)
-                .attr("width", textHeight + 2 * rectLabelPadding)
-                .attr("height", yLabelWidth + 4 * rectLabelPadding)
-                .attr("fill", "#eee")
-                .attr("fill-opacity", 0.5);
-      ylabel.select("text")
-            .attr("transform", "translate(" + 5 + "," + yLabelY + ")rotate(-90)")
-            .style("cursor", "pointer")
-            .style("visibility", "visible")
-            .on('mouseover', function() {
-                // On mouse over we want to display a darker rectangle behind the label
-                yLabelRect.attr("fill", "#ddd");
-              })
-            .on('mouseout', function() {
-                yLabelRect.attr("fill", "#eee");
-              })
-            .on("click", function () {
-                if (selectedAxis != 1) {
-                  var featureSelectorX = labelPadding + axesPadding + margin.left;
-                  var featureSelectorY = margin.top + (plotHeight - textHeight * maxFeaturesInList) / 2;
-                  featureSelectorGroup.style("left", featureSelectorX + "px")
-                                      .style("top", featureSelectorY + "px")
-                                      .style("visibility", "visible");
-                  selectedAxis = 1;
-                } else {
-                  featureSelectorGroup.style("visibility", "hidden");
-                  selectedAxis = -1;
-                }
-              });
-              
-      // Add a legend to the bottom right
-      var mistakePredLegend = plotGroup.append("g");
-      mistakePredLegend.append("text")
-                       .text("Incorrect " + classes[0] + " Classification")
-                       .attr("class", "label")
-                       .style("visibility", "hidden");
-               
-      var mistakePredictionWidth = mistakePredLegend.select("text").node().getComputedTextLength();
-      var curX = width - 8 - mistakePredictionWidth;
+      // Add labels with rectangles to the axes
+      if (yi + 1 == numPlots) {
+        var xlabel = plotGroup.append("g");
+        var xLabelRect = xlabel.append("rect");
+        xlabel.append("text")
+              .data([xi])
+              .text(fitText(featureNames[xdim][0], plotWidth - plotWidthPadding))
+              .attr("class", "label")
+              .style("visibility", "hidden");
+        var xLabelWidth = xlabel.select("text").node().getComputedTextLength();
+        var xLabelX = labelPadding + axesPadding + (plotWidth - xLabelWidth - plotWidthPadding) / 2 + xi * plotWidth;
+        var xLabelY = axesPadding + numPlots * plotHeight - plotHeightPadding - 4;
+        xLabelRect.attr("x", xLabelX - 2 * rectLabelPadding)
+                  .attr("y", xLabelY - textHeight)
+                  .attr("width", xLabelWidth + 4 * rectLabelPadding)
+                  .attr("height", textHeight + 2 * rectLabelPadding)
+                  .attr("fill", "#eee")
+                  .attr("fill-opacity", 0.5);
       
-      mistakePredLegend.select("text")
-                       .attr("x", curX)
-                       .attr("y", plotHeight + axesPadding - 8)
-                       .style("visibility", "visible");
-      
-      mistakePredLegend.append("text")
-                       .text("Incorrect " + classes[1] + " Classification")
-                       .attr("class", "label")
-                       .attr("x", curX)
-                       .attr("y", plotHeight + axesPadding + 8);
-                 
-      curX = curX - 4 - mistakePointRadius;
-      plotGroup.append("path")               
-               .attr("d", function () {
-                  return drawCross(curX, plotHeight + axesPadding - 11, mistakePointRadius);
+        xlabel.select("text")
+              .attr("x", xLabelX)
+              .attr("y", xLabelY)
+              .style("cursor", "pointer")
+              .style("visibility", "visible")
+              .on("mouseover", function() {
+                  // On mouse over we want to display a darker rectangle behind the label
+                  xLabelRect.attr("fill", "#ddd");
                 })
-               .attr("stroke-width", 2)
-               .attr("stroke", function () { 
-                    return colorScale("correct");
-                });
-  
-      plotGroup.append("path")               
-               .attr("d", function () {
-                  return drawCross(curX, plotHeight + axesPadding + 5, mistakePointRadius);
+              .on("mouseout", function() {
+                  xLabelRect.attr("fill", "#eee");
                 })
-               .attr("stroke-width", 2)
-               .attr("stroke", function () { 
-                    return colorScale("incorrect");
+              .on("click", function (d) {
+                  if (selectedAxis != 0 || selectedFeatureIndex != d) {
+                    var featureSelectorX = margin.left + labelPadding + axesPadding + xi * plotWidth + (plotWidth - (longestFeatureWidth + 10 * rectLabelPadding)) / 2;
+                    var featureSelectorY = margin.top + labelPadding + fullPlotHeight - textHeight * maxFeaturesInList;
+                    
+                    if (featureSelectorX < margin.left + labelPadding + axesPadding) {
+                      featureSelectorX = margin.left + labelPadding + axesPadding;
+                    }
+                    
+                    if (featureSelectorX > margin.left + labelPadding + axesPadding + fullPlotWidth - longestFeatureWidth) {
+                      featureSelectorX = margin.left + labelPadding + axesPadding + fullPlotWidth - longestFeatureWidth;
+                    }
+                    
+                    featureSelectorGroup.style("left", featureSelectorX + "px")
+                                        .style("top", featureSelectorY + "px")
+                                        .style("visibility", "visible");
+                    selectedAxis = 0;
+                    selectedFeatureIndex = d;
+                  } else {
+                    featureSelectorGroup.style("visibility", "hidden");
+                    selectedAxis = -1;
+                    selectedFeatureIndex = -1;
+                  }
                 });
-  
-  
-      var correctPredLegend = plotGroup.append("g");
-      correctPredLegend.append("text")
-                       .text("Correct " + classes[0] + " Classification")
-                       .attr("class", "label")
-                       .style("visibility", "hidden");
-               
-      var correctPredictionWidth = correctPredLegend.select("text").node().getComputedTextLength();
-      curX = curX - correctPredictionWidth - 20 - mistakePointRadius;
+      }
       
-      correctPredLegend.select("text")
-                       .attr("x", curX)
-                       .attr("y", plotHeight + axesPadding - 8)
-                       .style("visibility", "visible");
-                       
-      correctPredLegend.append("text")
-                       .text("Correct " + classes[1] + " Classification")
-                       .attr("class", "label")
-                       .attr("x", curX)
-                       .attr("y", plotHeight + axesPadding + 8);
-                       
-      curX = curX - 4 - correctPointRadius;
-      plotGroup.append("circle")
-               .attr("cx", curX)
-               .attr("cy", plotHeight + axesPadding - 11)
-               .attr("r", correctPointRadius)
-               .attr("fill-opacity", 0)
-               .attr("stroke", colorScale("correct"));
-               
-      plotGroup.append("circle")
-               .attr("cx", curX)
-               .attr("cy", plotHeight + axesPadding + 5)
-               .attr("r", correctPointRadius)
-               .attr("fill-opacity", 0)
-               .attr("stroke", colorScale("incorrect"));
+      if (xi == 0) {
+        var ylabel = plotGroup.append("g");
+        var yLabelRect = ylabel.append("rect");
+        ylabel.append("text")
+              .data([numPlots - yi - 1])
+              .text(fitText(featureNames[ydim][0], plotHeight - plotHeightPadding))
+              .attr("class", "label")
+              .style("visibility", "hidden");
+        var yLabelWidth = ylabel.select("text").node().getComputedTextLength();
+        var yLabelY = (plotHeight - plotHeightPadding + yLabelWidth) / 2 + yi * plotHeight;
+        yLabelRect.attr("x", -5)
+                  .attr("y", yLabelY - yLabelWidth - 2 * rectLabelPadding)
+                  .attr("width", textHeight + 2 * rectLabelPadding)
+                  .attr("height", yLabelWidth + 4 * rectLabelPadding)
+                  .attr("fill", "#eee")
+                  .attr("fill-opacity", 0.5);
+        ylabel.select("text")
+              .attr("transform", "translate(" + 5 + "," + yLabelY + ")rotate(-90)")
+              .style("cursor", "pointer")
+              .style("visibility", "visible")
+              .on('mouseover', function() {
+                  // On mouse over we want to display a darker rectangle behind the label
+                  yLabelRect.attr("fill", "#ddd");
+                })
+              .on('mouseout', function() {
+                  yLabelRect.attr("fill", "#eee");
+                })
+              .on("click", function (d) {
+                  if (selectedAxis != 1 || selectedFeatureIndex != d) {
+                    var featureSelectorX = labelPadding + axesPadding + margin.left;
+                    var featureSelectorY = margin.top + yi * plotHeight + (plotHeight - textHeight * maxFeaturesInList) / 2;
+                    
+                    if (featureSelectorY < margin.top) {
+                      featureSelectorY = margin.top;
+                    }
+                    
+                    if (featureSelectorY > margin.top + fullPlotHeight - textHeight * maxFeaturesInList) {
+                      featureSelectorY = margin.top + fullPlotHeight - textHeight * maxFeaturesInList;
+                    }
+                    
+                    featureSelectorGroup.style("left", featureSelectorX + "px")
+                                        .style("top", featureSelectorY + "px")
+                                        .style("visibility", "visible");
+                    selectedAxis = 1;
+                    selectedFeatureIndex = d;
+                  } else {
+                    featureSelectorGroup.style("visibility", "hidden");
+                    selectedAxis = -1;
+                    selectedFeatureIndex = -1;
+                  }
+                });
+      }
     }
   }
   
-  // Plot the weight vector
-  plotData(true);
+  function plotAllData(redraw) {  
+    // Plot the weight vector
+    for (var i = 0; i < numPlots; i++) {
+      for (var j = 0; j < numPlots; j++) {
+        plotData(redraw, (i == 0) && (j == 0) && redraw ? true : false, i, j, fullPlotWidth / numPlots, fullPlotHeight / numPlots);
+      }
+    }
+  }
+  
+  plotAllData(true);
+  
+  // Add a legend to the bottom right
+  var legendPadding = 12;
+  var mistakePredLegend = plot.append("g");
+  mistakePredLegend.append("text")
+                   .text("Incorrect " + classes[0] + " Classification")
+                   .attr("class", "label")
+                   .style("visibility", "hidden");
+           
+  var mistakePredictionWidth = mistakePredLegend.select("text").node().getComputedTextLength();
+  var curX = width - 8 - mistakePredictionWidth;
+  
+  mistakePredLegend.select("text")
+                   .attr("x", curX)
+                   .attr("y", fullPlotHeight + axesPadding - 8 + legendPadding)
+                   .style("visibility", "visible");
+  
+  mistakePredLegend.append("text")
+                   .text("Incorrect " + classes[1] + " Classification")
+                   .attr("class", "label")
+                   .attr("x", curX)
+                   .attr("y", fullPlotHeight + axesPadding + 8 + legendPadding);
+             
+  curX = curX - 4 - mistakePointRadius;
+  plot.append("path")               
+           .attr("d", function () {
+              return drawCross(curX, fullPlotHeight + axesPadding - 11 + legendPadding, mistakePointRadius);
+            })
+           .attr("stroke-width", 2)
+           .attr("stroke", function () { 
+                return colorScale("class-1-incorrect");
+            });
+
+  plot.append("path")               
+           .attr("d", function () {
+              return drawCross(curX, fullPlotHeight + axesPadding + 5 + legendPadding, mistakePointRadius);
+            })
+           .attr("stroke-width", 2)
+           .attr("stroke", function () { 
+                return colorScale("class-2-incorrect");
+            });
+
+
+  var correctPredLegend = plot.append("g");
+  correctPredLegend.append("text")
+                   .text("Correct " + classes[0] + " Classification")
+                   .attr("class", "label")
+                   .style("visibility", "hidden");
+           
+  var correctPredictionWidth = correctPredLegend.select("text").node().getComputedTextLength();
+  curX = curX - correctPredictionWidth - 20 - mistakePointRadius;
+  
+  correctPredLegend.select("text")
+                   .attr("x", curX)
+                   .attr("y", fullPlotHeight + axesPadding - 8 + legendPadding)
+                   .style("visibility", "visible");
+                   
+  correctPredLegend.append("text")
+                   .text("Correct " + classes[1] + " Classification")
+                   .attr("class", "label")
+                   .attr("x", curX)
+                   .attr("y", fullPlotHeight + axesPadding + 8 + legendPadding);
+                   
+  curX = curX - 4 - correctPointRadius;
+  plot.append("circle")
+           .attr("cx", curX)
+           .attr("cy", fullPlotHeight + axesPadding - 11 + legendPadding)
+           .attr("r", correctPointRadius)
+           .attr("fill-opacity", 0)
+           .attr("stroke", colorScale("class-1-correct"));
+           
+  plot.append("circle")
+           .attr("cx", curX)
+           .attr("cy", fullPlotHeight + axesPadding + 5 + legendPadding)
+           .attr("r", correctPointRadius)
+           .attr("fill-opacity", 0)
+           .attr("stroke", colorScale("class-2-correct"));
   
   // Create a list of all the features to use for selecting the axes
-  var maxFeaturesInList = 20;
+  var maxFeaturesInList = 20 > numDim ? numDim + 1 : 20;
   var featureSelectorGroup = d3.select("body").append("div")
                                               .style("left", "0px")
                                               .style("top", "0px")
@@ -618,13 +740,10 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                   .on("click", function(d, i) {
                       featureSelectorGroup.style("visibility", "hidden");
                       // Redraw with the given feature
-                      if (selectedAxis == 0) {
-                        currentXDim = i;
-                      } else {
-                        currentYDim = i;
-                      }
+                      currentFeatureDim[selectedFeatureIndex] = i;
                       selectedAxis = -1;
-                      plotData(true);
+                      selectedFeatureIndex = -1;
+                      plotAllData(true);
                     });
 
   /** Slider bar and distribution chart **/
@@ -638,7 +757,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
   var distHeight = bottomPlotHeight;//botHeight * (3.0/3);
   var x = d3.scale.linear()
     //.domain([0, data.length])
-    .range([1, plotWidth])
+    .range([1, fullPlotWidth])
     .clamp(true);
   var y = d3.scale.linear()
     //.domain([0, d3.max(data)])
@@ -718,6 +837,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
       useArea = false;
       colorType = "correct";
     }
+    colorType = "black";
 
     var xAxis = d3.svg.axis()
       .scale(x);
@@ -766,13 +886,14 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
       .remove();
 
     handle.attr("transform", "translate(" + x(0) + "," + (xAxisYValue) + ")");
+    handle.attr("cx", x(currentIndex));
 
     function brushed() {
       var value = brush.extent()[0];
 
       if (d3.event.sourceEvent) { // not a programmatic event
         value = x.invert(d3.mouse(this)[0]);
-        brush.extent([value, value]);
+        brush.extent([value-1, value-1]);
       }
 
       handle.attr("cx", x(value));
@@ -785,12 +906,13 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
       
       // Replot the data
       currentIndex = Math.floor(index);
-      plotData(false);
+      plotAllData(false);
     }
   }
 
-  var timeSeriesTypes = [errors, errorDeltas, trainAccuracies,
+  timeSeriesTypes = [errors, errorDeltas, trainAccuracies,
       validationAccuracies, testAccuracies];
+  currentTimeSeries = 0;
   drawDist(timeSeriesTypes[0]);
   //drawDist(timeSeriesTypes[1]);
 
@@ -847,7 +969,7 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
                       yLabelRect
                         .attr("y", newYLabelY - newYLabelWidth - 2 * rectLabelPadding)
                         .attr("height", newYLabelWidth + 4 * rectLabelPadding);
-                      plotData(true);
+                      plotAllData(true);
                       drawDist(timeSeriesTypes[i]);
                     });
 
@@ -889,4 +1011,26 @@ function drawElements(err, unparsedTrainData, unparsedValidationData,
               yAxisSelected = false;
             }
           });
+
+    var xLabel = bottom.append("g");
+    xLabel.append("text")
+          .text("Iterations")
+          .attr("class", "label")
+          .style("visibility", "hidden");
+    var xLabelWidth = xLabel.select("text").node().getComputedTextLength();
+    var xLabelX = labelPadding + axesPadding + (fullPlotWidth - xLabelWidth) / 2;
+    var xLabelY = bottomPlotHeight + axesPadding;
+    xLabel.select("text")
+          .attr("x", xLabelX)
+          .attr("y", xLabelY)
+          .style("visibility", "visible");
+}
+var webSocket = new WebSocket("ws://localhost:9999");
+webSocket.onmessage = function (event) {
+  console.log(JSON.parse(event.data));
+  updateVisualization(JSON.parse(event.data));
+}
+webSocket.onopen = function () {
+  console.log("opened");
+  webSocket.send("test");
 }
